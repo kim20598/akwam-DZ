@@ -1,35 +1,39 @@
 // js/scraper.js
 const akwamScraper = {
-    mainUrl: "https://akwam.cam",
-    timeout: 30000,
+    mainUrl: "https://ak.sv",
     
-    // ----------------------------
-    // وظائف المساعدة
-    // ----------------------------
-    getPoster(element) {
-        if (!element) return null;
-        const img = element.querySelector('img');
-        if (!img) return null;
-        
-        return img.getAttribute('data-src') || 
-               img.getAttribute('src') || 
-               img.getAttribute('data-lazy-src');
+    // قائمة CORS Proxies مجانية (اختبر واحدة فقط)
+    proxies: [
+        'https://cors-anywhere.herokuapp.com/',
+        'https://api.allorigins.win/raw?url=',
+        'https://thingproxy.freeboard.io/fetch/',
+        'https://corsproxy.io/?',
+        'https://proxy.cors.sh/'
+    ],
+    
+    // اختيار Proxy عشوائي
+    getRandomProxy() {
+        return this.proxies[Math.floor(Math.random() * this.proxies.length)];
     },
-
-    async fetchWithRetry(url, options = {}, retries = 3) {
-        for (let i = 0; i < retries; i++) {
+    
+    // دالة سحب مع Proxy
+    async fetchWithProxy(url, options = {}) {
+        let lastError = null;
+        
+        // جرب جميع الـ Proxies
+        for (const proxy of this.proxies) {
             try {
-                const response = await fetch(url, {
+                const proxyUrl = proxy + encodeURIComponent(url);
+                console.log('جرب Proxy:', proxy);
+                
+                const response = await fetch(proxyUrl, {
                     ...options,
                     headers: {
                         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                        'Accept-Language': 'ar,en-US;q=0.7,en;q=0.3',
-                        'Cache-Control': 'no-cache',
-                        'Pragma': 'no-cache',
+                        'Accept': 'text/html',
                         ...options.headers
                     },
-                    signal: AbortSignal.timeout(this.timeout)
+                    timeout: 10000
                 });
                 
                 if (response.ok) {
@@ -37,439 +41,364 @@ const akwamScraper = {
                     return text;
                 }
             } catch (error) {
-                if (i === retries - 1) throw error;
-                await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+                lastError = error;
+                console.warn(`فشل Proxy ${proxy}:`, error.message);
+                continue;
             }
         }
-        throw new Error('فشل في جلب البيانات');
-    },
-
-    async getDocument(url) {
-        try {
-            const html = await this.fetchWithRetry(url);
-            const parser = new DOMParser();
-            return parser.parseFromString(html, 'text/html');
-        } catch (error) {
-            console.error('خطأ في تحليل الصفحة:', error);
-            return null;
-        }
-    },
-
-    // ----------------------------
-    // وظائف السحب الرئيسية
-    // ----------------------------
-    parseMediaItems(doc) {
-        const items = [];
         
-        // محاولة عدة أنماط للعناصر (حسب تغييرات الموقع)
-        const selectors = [
-            'div.col-lg-auto.col-md-4.col-6',  // النمط القديم
-            'div.col-lg-3.col-md-4.col-6',     // نمط جديد
-            'div.movie-item',                   // نمط البطاقات
-            'div.item',                         // نمط عام
-            'article.post'                      // نمط المقالات
-        ];
-
-        let elements = [];
-        for (const selector of selectors) {
-            elements = doc.querySelectorAll(selector);
-            if (elements.length > 0) break;
-        }
-
-        elements.forEach(el => {
-            try {
-                // العثور على الرابط
-                const link = el.querySelector('a');
-                if (!link) return;
-                
-                const href = link.getAttribute('href');
-                if (!href) return;
-                
-                // العثور على العنوان
-                let title = '';
-                const titleSelectors = [
-                    'h3.entry-title',
-                    'h2.title',
-                    '.movie-title',
-                    '.title',
-                    'h3',
-                    'h2'
-                ];
-                
-                for (const selector of titleSelectors) {
-                    const titleEl = el.querySelector(selector);
-                    if (titleEl) {
-                        title = titleEl.textContent.trim();
-                        break;
-                    }
-                }
-                
-                if (!title) return;
-                
-                // العثور على البوستر
-                const poster = this.getPoster(el);
-                
-                // العثور على الجودة
-                let quality = '';
-                const qualitySelectors = [
-                    '.movie-quality',
-                    '.quality',
-                    '.label',
-                    'span.badge'
-                ];
-                
-                for (const selector of qualitySelectors) {
-                    const qualityEl = el.querySelector(selector);
-                    if (qualityEl) {
-                        quality = qualityEl.textContent.trim();
-                        break;
-                    }
-                }
-                
-                // العثور على السنة
-                let year = '';
-                const yearSelectors = [
-                    '.movie-year',
-                    '.year',
-                    'span:contains("20")'
-                ];
-                
-                for (const selector of yearSelectors) {
-                    const yearEl = el.querySelector(selector);
-                    if (yearEl) {
-                        const yearText = yearEl.textContent.trim();
-                        const yearMatch = yearText.match(/\b(19|20)\d{2}\b/);
-                        if (yearMatch) {
-                            year = yearMatch[0];
-                            break;
-                        }
-                    }
-                }
-                
-                // تحديد النوع بناءً على الرابط
-                let type = 'movie';
-                const urlLower = href.toLowerCase();
-                if (urlLower.includes('/series/') || urlLower.includes('/season/')) {
-                    type = 'series';
-                } else if (urlLower.includes('/anime/')) {
-                    type = 'anime';
-                } else if (urlLower.includes('/show/')) {
-                    type = 'show';
-                }
-                
-                items.push({
-                    title,
-                    url: href.startsWith('http') ? href : `${this.mainUrl}${href}`,
-                    poster: poster ? (poster.startsWith('http') ? poster : `${this.mainUrl}${poster}`) : null,
-                    quality,
-                    year,
-                    type
-                });
-            } catch (error) {
-                console.error('خطأ في تحليل العنصر:', error);
-            }
-        });
-
-        return items;
+        throw lastError || new Error('جميع الـ Proxies فشلت');
     },
-
-    // ----------------------------
-    // واجهات API الرئيسية
-    // ----------------------------
+    
+    // طريقة بديلة: استخدام service خاص (سيحتاج backend)
+    async fetchWithBackend(url) {
+        try {
+            // يمكنك استبدال هذا بـ backend حقيقي
+            const backendUrl = 'https://your-backend.com/proxy'; // تحتاج لإنشاء هذا
+            
+            const response = await fetch(backendUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ url: url })
+            });
+            
+            if (response.ok) {
+                return await response.json();
+            }
+        } catch (error) {
+            console.error('خطأ في Backend:', error);
+            throw error;
+        }
+    },
+    
+    // سحب الصفحة الرئيسية مع Proxy
     async fetchHomePage() {
         try {
+            console.log('محاولة سحب البيانات من ak.sv...');
+            
+            const html = await this.fetchWithProxy(this.mainUrl);
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            
+            // محاولة استخراج البيانات
             const sections = [];
             
-            // قائمة الأقسام الرئيسية
-            const mainSections = [
-                { url: `${this.mainUrl}/movies`, title: '🎬 أحدث الأفلام', type: 'movies' },
-                { url: `${this.mainUrl}/series`, title: '📺 أحدث المسلسلات', type: 'series' },
-                { url: `${this.mainUrl}/anime`, title: '👻 أحدث الأنمي', type: 'anime' },
-                { url: `${this.mainUrl}/shows`, title: '📡 العروض والبرامج', type: 'shows' }
+            // 1. البحث عن الأقسام الرئيسية
+            const sectionSelectors = [
+                { selector: 'section:has(h2)', type: 'section' },
+                { selector: '.container .row', type: 'row' },
+                { selector: 'div[class*="movies"]', type: 'movies' },
+                { selector: 'div[class*="series"]', type: 'series' }
             ];
             
-            for (const section of mainSections) {
-                try {
-                    const doc = await this.getDocument(section.url);
-                    if (!doc) continue;
+            for (const { selector, type } of sectionSelectors) {
+                const elements = doc.querySelectorAll(selector);
+                
+                elements.forEach((section, index) => {
+                    const titleEl = section.querySelector('h2, h3, .title');
+                    const title = titleEl ? titleEl.textContent.trim() : `قسم ${index + 1}`;
                     
-                    const items = this.parseMediaItems(doc);
+                    // استخراج العناصر داخل القسم
+                    const items = this.extractItemsFromSection(section);
+                    
                     if (items.length > 0) {
                         sections.push({
-                            title: section.title,
-                            type: section.type,
-                            items: items.slice(0, 12) // عرض 12 عنصر كحد أقصى
+                            title: title,
+                            type: type,
+                            items: items.slice(0, 6)
                         });
                     }
-                } catch (error) {
-                    console.error(`خطأ في قسم ${section.title}:`, error);
-                }
+                });
             }
             
-            // إذا فشلت جميع الأقسام، استخدم بيانات تجريبية
+            // 2. إذا لم نجد أقسام، نبحث عن جميع العناصر
             if (sections.length === 0) {
-                return this.getFallbackData();
-            }
-            
-            return { sections, success: true, timestamp: new Date().toISOString() };
-        } catch (error) {
-            console.error('خطأ في جلب الصفحة الرئيسية:', error);
-            return this.getFallbackData();
-        }
-    },
-
-    async search(query, page = 1) {
-        try {
-            const encodedQuery = encodeURIComponent(query);
-            const searchUrl = `${this.mainUrl}/search?q=${encodedQuery}&page=${page}`;
-            
-            const doc = await this.getDocument(searchUrl);
-            if (!doc) {
-                return { items: [], pagination: { current: page, total: 1 } };
-            }
-            
-            const items = this.parseMediaItems(doc);
-            
-            // محاولة استخراج معلومات الترقيم
-            let totalPages = 1;
-            const paginationEls = doc.querySelectorAll('.pagination a, .page-numbers a');
-            const pageNumbers = [];
-            
-            paginationEls.forEach(el => {
-                const text = el.textContent.trim();
-                const num = parseInt(text);
-                if (!isNaN(num)) {
-                    pageNumbers.push(num);
+                console.log('البحث عن جميع العناصر...');
+                const allItems = this.extractAllItems(doc);
+                
+                if (allItems.length > 0) {
+                    sections.push({
+                        title: 'المحتوى المتاح',
+                        type: 'all',
+                        items: allItems.slice(0, 12)
+                    });
                 }
-            });
+            }
             
-            if (pageNumbers.length > 0) {
-                totalPages = Math.max(...pageNumbers);
+            // 3. إذا لم نجد أي شيء
+            if (sections.length === 0) {
+                console.log('لم يتم العثور على بيانات، استخدام بيانات وهمية');
+                return this.getMockData();
             }
             
             return {
-                items,
-                pagination: {
-                    current: page,
-                    total: totalPages,
-                    hasNext: page < totalPages,
-                    hasPrev: page > 1
-                }
+                sections: sections,
+                success: true,
+                message: `تم العثور على ${sections.length} قسم`,
+                timestamp: new Date().toISOString()
             };
+            
         } catch (error) {
-            console.error('خطأ في البحث:', error);
-            return { items: [], pagination: { current: page, total: 1 } };
+            console.error('خطأ في سحب البيانات:', error);
+            return this.getMockData();
         }
     },
-
-    async getMediaDetails(url) {
+    
+    // استخراج العناصر من قسم معين
+    extractItemsFromSection(section) {
+        const items = [];
+        
+        // محاولة عدة أنماط للعناصر
+        const itemSelectors = [
+            'a[href*="/movie/"]',
+            'a[href*="/series/"]',
+            'a[href*="/anime/"]',
+            'a[href*="/show/"]',
+            '.post',
+            '.item',
+            '.card',
+            'article',
+            'div[class*="col-"]'
+        ];
+        
+        itemSelectors.forEach(selector => {
+            section.querySelectorAll(selector).forEach(element => {
+                const item = this.extractItemData(element);
+                if (item && item.title) {
+                    items.push(item);
+                }
+            });
+        });
+        
+        return items;
+    },
+    
+    // استخراج جميع العناصر من الصفحة
+    extractAllItems(doc) {
+        const items = [];
+        
+        // البحث عن جميع الروابط المحتملة
+        const links = doc.querySelectorAll('a[href*="/movie/"], a[href*="/series/"], a[href*="/anime/"], a[href*="/show/"]');
+        
+        links.forEach(link => {
+            try {
+                const title = link.textContent.trim() || 
+                              link.getAttribute('title') || 
+                              link.getAttribute('alt') ||
+                              link.querySelector('img')?.getAttribute('alt') ||
+                              '';
+                
+                if (title && title.length > 2) { // تأكد أن العنوان ليس فارغاً
+                    const href = link.getAttribute('href');
+                    const fullUrl = href.startsWith('http') ? href : this.mainUrl + href;
+                    
+                    // استخراج الصورة
+                    let image = null;
+                    const img = link.querySelector('img');
+                    if (img) {
+                        image = img.getAttribute('src') || 
+                                img.getAttribute('data-src') ||
+                                img.getAttribute('data-lazy-src');
+                        
+                        if (image && !image.startsWith('http')) {
+                            image = this.mainUrl + image;
+                        }
+                    }
+                    
+                    // تحديد النوع
+                    let type = 'movie';
+                    if (href.includes('/series/')) type = 'series';
+                    if (href.includes('/anime/')) type = 'anime';
+                    if (href.includes('/show/')) type = 'show';
+                    
+                    items.push({
+                        title: title,
+                        url: fullUrl,
+                        poster: image,
+                        type: type
+                    });
+                }
+            } catch (error) {
+                console.warn('خطأ في استخراج عنصر:', error);
+            }
+        });
+        
+        // إزالة التكرارات
+        return this.removeDuplicates(items);
+    },
+    
+    // إزالة العناصر المكررة
+    removeDuplicates(items) {
+        const seen = new Set();
+        return items.filter(item => {
+            const key = item.url + item.title;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
+    },
+    
+    // استخراج بيانات عنصر واحد
+    extractItemData(element) {
         try {
-            const doc = await this.getDocument(url);
-            if (!doc) return null;
+            // العثور على الرابط
+            let link = element;
+            if (element.tagName !== 'A') {
+                link = element.querySelector('a');
+            }
             
-            // استخراج العنوان
+            if (!link) return null;
+            
+            const href = link.getAttribute('href');
+            if (!href) return null;
+            
+            // العثور على العنوان
+            let title = '';
             const titleSelectors = [
-                'h1.entry-title',
-                'h1.title',
-                '.movie-title h1',
-                'h1'
+                'h3', 'h2', '.title', '.entry-title', 
+                '.movie-title', '.series-title'
             ];
             
-            let title = '';
             for (const selector of titleSelectors) {
-                const titleEl = doc.querySelector(selector);
+                const titleEl = element.querySelector(selector) || link.querySelector(selector);
                 if (titleEl) {
                     title = titleEl.textContent.trim();
-                    break;
+                    if (title) break;
                 }
             }
             
-            // استخراج الوصف
-            let plot = '';
-            const plotSelectors = [
-                'h2:contains("قصة") + div > p',
-                '.description',
-                '.plot',
-                'meta[name="description"]',
-                'meta[property="og:description"]'
-            ];
+            if (!title) {
+                title = link.textContent.trim() || 
+                        link.getAttribute('title') || 
+                        link.getAttribute('alt') || '';
+            }
             
-            for (const selector of plotSelectors) {
-                const plotEl = doc.querySelector(selector);
-                if (plotEl) {
-                    plot = plotEl.getAttribute('content') || plotEl.textContent;
-                    plot = plot.trim();
-                    if (plot) break;
+            if (!title || title.length < 2) return null;
+            
+            // العثور على الصورة
+            let image = null;
+            const imgSelectors = ['img', '.poster', '.thumbnail'];
+            
+            for (const selector of imgSelectors) {
+                const img = element.querySelector(selector) || link.querySelector(selector);
+                if (img) {
+                    image = img.getAttribute('src') || 
+                            img.getAttribute('data-src') ||
+                            img.getAttribute('data-lazy-src');
+                    if (image) break;
                 }
             }
             
-            // استخراج البوستر
-            let poster = '';
-            const posterSelectors = [
-                'meta[property="og:image"]',
-                'meta[name="twitter:image"]',
-                '.movie-poster img',
-                '.poster img',
-                'img[src*="poster"]',
-                'img[src*="cover"]'
-            ];
-            
-            for (const selector of posterSelectors) {
-                const posterEl = doc.querySelector(selector);
-                if (posterEl) {
-                    poster = posterEl.getAttribute('content') || posterEl.getAttribute('src');
-                    if (poster) break;
-                }
+            // إضافة النطاق الأساسي إذا كانت الصورة نسبية
+            if (image && !image.startsWith('http')) {
+                image = this.mainUrl + image;
             }
             
-            // استخراج التصنيفات
-            const tags = [];
-            const tagSelectors = [
-                '.tags a',
-                '.categories a',
-                '.genre a',
-                'a[href*="/category/"]',
-                'a[href*="/genre/"]'
-            ];
-            
-            tagSelectors.forEach(selector => {
-                doc.querySelectorAll(selector).forEach(el => {
-                    const tag = el.textContent.trim();
-                    if (tag && !tags.includes(tag)) {
-                        tags.push(tag);
-                    }
-                });
-            });
-            
-            // استخراج السنة
-            let year = '';
-            const yearMatch = url.match(/\/(19|20)\d{2}\//);
-            if (yearMatch) {
-                year = yearMatch[0].replace(/\//g, '');
-            }
-            
-            // استخراج الحلقات (للمسلسلات)
-            const episodes = [];
-            const episodeSelectors = [
-                '#series-episodes .episode',
-                '.episodes-list .episode',
-                '.season-episodes .episode'
-            ];
-            
-            episodeSelectors.forEach(selector => {
-                doc.querySelectorAll(selector).forEach((ep, index) => {
-                    const epLink = ep.querySelector('a');
-                    if (epLink) {
-                        episodes.push({
-                            title: epLink.textContent.trim() || `الحلقة ${index + 1}`,
-                            url: epLink.getAttribute('href'),
-                            number: index + 1
-                        });
-                    }
-                });
-            });
+            // تحديد النوع
+            let type = 'movie';
+            if (href.includes('/series/')) type = 'series';
+            if (href.includes('/anime/')) type = 'anime';
+            if (href.includes('/show/')) type = 'show';
             
             return {
-                title,
-                plot,
-                poster: poster ? (poster.startsWith('http') ? poster : `${this.mainUrl}${poster}`) : null,
-                tags,
-                year,
-                episodes,
-                url
+                title: title,
+                url: href.startsWith('http') ? href : this.mainUrl + href,
+                poster: image,
+                type: type
             };
+            
         } catch (error) {
-            console.error('خطأ في جلب تفاصيل الوسائط:', error);
+            console.warn('خطأ في استخراج بيانات العنصر:', error);
             return null;
         }
     },
-
-    async getVideoSources(episodeUrl) {
+    
+    // البحث
+    async search(query) {
         try {
-            const doc = await this.getDocument(episodeUrl);
-            if (!doc) return [];
+            const searchUrl = `${this.mainUrl}/search?q=${encodeURIComponent(query)}`;
+            const html = await this.fetchWithProxy(searchUrl);
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
             
-            const sources = [];
+            const items = this.extractAllItems(doc);
             
-            // البحث عن روابط الفيديو المباشرة
-            const videoSelectors = [
-                'source[src]',
-                'video source[src]',
-                'iframe[src*="embed"]',
-                'iframe[src*="video"]',
-                'div[data-video-src]',
-                'a[href*=".mp4"]',
-                'a[href*=".m3u8"]'
-            ];
+            return {
+                items: items.slice(0, 20),
+                query: query,
+                count: items.length,
+                success: true
+            };
             
-            videoSelectors.forEach(selector => {
-                doc.querySelectorAll(selector).forEach(el => {
-                    const src = el.getAttribute('src') || 
-                               el.getAttribute('data-video-src') || 
-                               el.getAttribute('href');
-                    
-                    if (src && (src.includes('.mp4') || src.includes('.m3u8') || src.includes('embed'))) {
-                        let quality = 'متوسط';
-                        const qualityAttr = el.getAttribute('size') || 
-                                           el.getAttribute('label') || 
-                                           el.getAttribute('data-quality');
-                        
-                        if (qualityAttr) {
-                            quality = qualityAttr;
-                        } else if (src.includes('1080')) {
-                            quality = 'عالية';
-                        } else if (src.includes('720')) {
-                            quality = 'متوسط';
-                        } else if (src.includes('480')) {
-                            quality = 'منخفضة';
-                        }
-                        
-                        sources.push({
-                            url: src.startsWith('http') ? src : `${this.mainUrl}${src}`,
-                            quality,
-                            type: src.includes('.m3u8') ? 'hls' : 'direct'
-                        });
-                    }
-                });
-            });
-            
-            return sources;
         } catch (error) {
-            console.error('خطأ في جلب مصادر الفيديو:', error);
-            return [];
+            console.error('خطأ في البحث:', error);
+            return {
+                items: [],
+                query: query,
+                count: 0,
+                success: false,
+                error: error.message
+            };
         }
     },
-
-    // بيانات تجريبية للاستخدام عند فشل الاتصال
-    getFallbackData() {
+    
+    // بيانات وهمية للاستخدام عند فشل السحب
+    getMockData() {
+        console.log('استخدام بيانات وهمية...');
+        
         return {
             sections: [
                 {
-                    title: '🎬 أفلام تجريبية',
-                    type: 'movies',
+                    title: "أفلام أكشن",
+                    type: "movies",
                     items: [
                         {
-                            title: 'فيلم تجريبي 1',
-                            url: '#',
-                            poster: 'https://via.placeholder.com/300x450/333/666?text=فيلم+تجريبي',
-                            quality: 'HD',
-                            year: '2024',
-                            type: 'movie'
+                            title: "فيلم أكشن 2024",
+                            url: "#",
+                            poster: "https://via.placeholder.com/300x450/FF6B6B/FFFFFF?text=فيلم+أكشن",
+                            type: "movie",
+                            quality: "HD",
+                            year: "2024"
                         },
                         {
-                            title: 'فيلم تجريبي 2',
-                            url: '#',
-                            poster: 'https://via.placeholder.com/300x450/333/666?text=فيلم+تجريبي',
-                            quality: 'FHD',
-                            year: '2023',
-                            type: 'movie'
+                            title: "فيلم تشويق",
+                            url: "#",
+                            poster: "https://via.placeholder.com/300x450/4ECDC4/FFFFFF?text=فيلم+تشويق",
+                            type: "movie",
+                            quality: "FHD",
+                            year: "2023"
+                        }
+                    ]
+                },
+                {
+                    title: "مسلسلات دراما",
+                    type: "series",
+                    items: [
+                        {
+                            title: "مسلسل درامي 2024",
+                            url: "#",
+                            poster: "https://via.placeholder.com/300x450/FFE66D/333333?text=مسلسل+دراما",
+                            type: "series",
+                            episodes: "30 حلقة",
+                            year: "2024"
+                        },
+                        {
+                            title: "مسلسل تاريخي",
+                            url: "#",
+                            poster: "https://via.placeholder.com/300x450/95E1D3/333333?text=مسلسل+تاريخي",
+                            type: "series",
+                            episodes: "45 حلقة",
+                            year: "2023"
                         }
                     ]
                 }
             ],
             success: false,
-            timestamp: new Date().toISOString(),
-            isFallback: true
+            isMock: true,
+            message: "بيانات وهمية - فشل الاتصال بالموقع",
+            timestamp: new Date().toISOString()
         };
     }
 };
