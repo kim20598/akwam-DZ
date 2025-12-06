@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مشاهدة الفيلم - أكوام</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/responsive.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="assets/images/favicon.ico" type="image/x-icon">
+    <style>
+        .watch-container {
+            padding-top: 80px;
+            background: #000;
+            min-height: 100vh;
+        }
+        
+        .video-player {
+            max-width: 1200px;
+            margin: 0 auto 30px;
+            background: #000;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+        
+        video {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        .video-info {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: var(--bg-light);
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+        
+        .video-title {
+            font-size: 28px;
+            margin-bottom: 15px;
+            color: var(--text-color);
+        }
+        
+        .video-meta {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            color: var(--text-secondary);
+            font-size: 14px;
+            flex-wrap: wrap;
+        }
+        
+        .video-meta span {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .video-description {
+            line-height: 1.8;
+            color: var(--text-secondary);
+            margin-bottom: 30px;
+        }
+        
+        .quality-selector {
+            margin-top: 30px;
+        }
+        
+        .quality-selector h3 {
+            margin-bottom: 15px;
+            color: var(--text-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .quality-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .quality-btn {
+            padding: 10px 20px;
+            background: var(--bg-dark);
+            border: 2px solid var(--border-color);
+            color: var(--text-color);
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+        
+        .quality-btn:hover {
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+        
+        .quality-btn.active {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+            color: white;
+        }
+        
+        .episode-selector {
+            margin-top: 30px;
+        }
+        
+        .episode-selector h3 {
+            margin-bottom: 15px;
+            color: var(--text-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .episodes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 10px;
+        }
+        
+        .episode-btn {
+            padding: 12px;
+            background: var(--bg-dark);
+            border: 2px solid var(--border-color);
+            color: var(--text-color);
+            border-radius: 5px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .episode-btn:hover {
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+            transform: translateY(-2px);
+        }
+        
+        .episode-btn.active {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+            color: white;
+        }
+        
+        .episode-btn.watched {
+            opacity: 0.7;
+        }
+        
+        .episode-btn.watched::after {
+            content: "✓";
+            color: #46d369;
+            margin-right: 5px;
+        }
+        
+        .video-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .video-controls button {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .btn-download {
+            background: #2196F3;
+            color: white;
+        }
+        
+        .btn-download:hover {
+            background: #1976D2;
+        }
+        
+        .btn-share {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .btn-share:hover {
+            background: #388E3C;
+        }
+        
+        .btn-favorite {
+            background: #FF9800;
+            color: white;
+        }
+        
+        .btn-favorite:hover {
+            background: #F57C00;
+        }
+        
+        .btn-favorite.active {
+            background: #f44336;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <nav class="navbar">
+            <div class="container">
+                <div class="nav-brand">
+                    <a href="index.html" class="logo">
+                        <i class="fas fa-film"></i>
+                        <span>أكوام</span>
+                    </a>
+                </div>
+                
+                <div class="nav-menu">
+                    <ul class="nav-links">
+                        <li><a href="index.html"><i class="fas fa-home"></i> الرئيسية</a></li>
+                        <li><a href="movies.html"><i class="fas fa-video"></i> الأفلام</a></li>
+                        <li><a href="series.html"><i class="fas fa-tv"></i> المسلسلات</a></li>
+                    </ul>
+                </div>
+                
+                <button class="mobile-toggle" onclick="toggleMenu()">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </nav>
+    </header>
+
+    <main class="watch-container">
+        <div class="container">
+            <!-- Video Player -->
+            <div class="video-player">
+                <video id="videoPlayer" controls poster="https://via.placeholder.com/1200x675/CCCCCC/333333?text=فيديو+تجريبي">
+                    <source src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" type="video/mp4">
+                    <source src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.ogg" type="video/ogg">
+                    متصفحك لا يدعم تشغيل الفيديو.
+                </video>
+            </div>
+            
+            <!-- Video Info -->
+            <div class="video-info">
+                <h1 class="video-title" id="videoTitle">الفيلم الأول - فيلم الأكشن الرائع</h1>
+                
+                <div class="video-meta">
+                    <span><i class="fas fa-calendar"></i> 2024</span>
+                    <span><i class="fas fa-clock"></i> 120 دقيقة</span>
+                    <span><i class="fas fa-star"></i> 8.5/10</span>
+                    <span><i class="fas fa-eye"></i> 1.2M مشاهدة</span>
+                    <span class="movie-type">فيلم</span>
+                </div>
+                
+                <p class="video-description">
+                    قصة الفيلم تدور حول بطل الأكشن الذي يحاول إنقاذ العالم من شرير خطير.
+                    الفيلم مليء بالمشاهد الرائعة والإثارة والتشويق. يعتبر من أفضل أفلام الأكشن
+                    لهذا العام ويضم نخبة من النجوم والممثلين المحترفين.
+                </p>
+                
+                <div class="video-tags">
+                    <span class="genre-tag">أكشن</span>
+                    <span class="genre-tag">تشويق</span>
+                    <span class="genre-tag">عربي</span>
+                    <span class="genre-tag">دراما</span>
+                </div>
+                
+                <!-- Quality Selector -->
+                <div class="quality-selector">
+                    <h3><i class="fas fa-hd"></i> جودة الفيديو</h3>
+                    <div class="quality-buttons">
+                        <button class="quality-btn active" onclick="changeQuality('360p')">360p</button>
+                        <button class="quality-btn" onclick="changeQuality('480p')">480p</button>
+                        <button class="quality-btn" onclick="changeQuality('720p')">720p HD</button>
+                        <button class="quality-btn" onclick="changeQuality('1080p')">1080p FHD</button>
+                        <button class="quality-btn" onclick="changeQuality('4k')">4K Ultra</button>
+                    </div>
+                </div>
+                
+                <!-- Episode Selector (for series) -->
+                <div class="episode-selector" id="episodeSelector" style="display: none;">
+                    <h3><i class="fas fa-list"></i> قائمة الحلقات</h3>
+                    <div class="episodes-grid" id="episodesGrid">
+                        <!-- Episodes will be loaded here -->
+                    </div>
+                </div>
+                
+                <!-- Video Controls -->
+                <div class="video-controls">
+                    <button class="btn-download" onclick="downloadVideo()">
+                        <i class="fas fa-download"></i> تحميل
+                    </button>
+                    <button class="btn-share" onclick="shareVideo()">
+                        <i class="fas fa-share"></i> مشاركة
+                    </button>
+                    <button class="btn-favorite" id="favoriteBtn" onclick="toggleFavorite()">
+                        <i class="far fa-heart"></i> إضافة للمفضلة
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Related Content -->
+            <div class="related-content">
+                <div class="section-header">
+                    <h2><i class="fas fa-fire"></i> قد يعجبك أيضًا</h2>
+                </div>
+                <div class="movies-grid">
+                    <div class="movie-card">
+                        <a href="watch.html?id=2">
+                            <div class="movie-poster">
+                                <img src="https://via.placeholder.com/300x450/CCCCCC/333333?text=فيلم+2" alt="فيلم 2">
+                                <div class="movie-overlay">
+                                    <i class="fas fa-play"></i>
+                                </div>
+                                <span class="movie-quality">HD</span>
+                            </div>
+                            <div class="movie-info">
+                                <h3 class="movie-title">فيلم الأكشن الثاني</h3>
+                                <div class="movie-meta">
+                                    <span class="movie-type">فيلم</span>
+                                    <span>2024</span>
+                                    <span><i class="fas fa-star"></i> 8.0</span>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    
+                    <div class="movie-card">
+                        <a href="watch.html?id=3">
+                            <div class="movie-poster">
+                                <img src="https://via.placeholder.com/300x450/CCCCCC/333333?text=فيلم+3" alt="فيلم 3">
+                                <div class="movie-overlay">
+                                    <i class="fas fa-play"></i>
+                                </div>
+                                <span class="movie-quality">FHD</span>
+                            </div>
+                            <div class="movie-info">
+                                <h3 class="movie-title">فيلم التشويق</h3>
+                                <div class="movie-meta">
+                                    <span class="movie-type">فيلم</span>
+                                    <span>2023</span>
+                                    <span><i class="fas fa-star"></i> 8.7</span>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    
+                    <div class="movie-card">
+                        <a href="watch.html?id=4">
+                            <div class="movie-poster">
+                                <img src="https://via.placeholder.com/300x450/CCCCCC/333333?text=فيلم+4" alt="فيلم 4">
+                                <div class="movie-overlay">
+                                    <i class="fas fa-play"></i>
+                                </div>
+                                <span class="movie-quality">4K</span>
+                            </div>
+                            <div class="movie-info">
+                                <h3 class="movie-title">فيلم الدراما</h3>
+                                <div class="movie-meta">
+                                    <span class="movie-type">فيلم</span>
+                                    <span>2024</span>
+                                    <span><i class="fas fa-star"></i> 9.0</span>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    
+                    <div class="movie-card">
+                        <a href="watch.html?id=5">
+                            <div class="movie-poster">
+                                <img src="https://via.placeholder.com/300x450/CCCCCC/333333?text=فيلم+5" alt="فيلم 5">
+                                <div class="movie-overlay">
+                                    <i class="fas fa-play"></i>
+                                </div>
+                                <span class="movie-quality">HD</span>
+                            </div>
+                            <div class="movie-info">
+                                <h3 class="movie-title">فيلم الكوميديا</h3>
+                                <div class="movie-meta">
+                                    <span class="movie-type">فيلم</span>
+                                    <span>2024</span>
+                                    <span><i class="fas fa-star"></i> 7.5</span>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-bottom">
+                <p>© 2024 أكوام. جميع الحقوق محفوظة.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/main.js"></script>
+    <script>
+        // Video Player Functions
+        function changeQuality(quality) {
+            // Remove active class from all buttons
+            document.querySelectorAll('.quality-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Add active class to clicked button
+            event.target.classList.add('active');
+            
+            // Here you would change the video source based on quality
+            alert(`تم تغيير الجودة إلى ${quality}`);
+        }
+        
+        function toggleFavorite() {
+            const btn = document.getElementById('favoriteBtn');
+            const icon = btn.querySelector('i');
+            
+            if (btn.classList.contains('active')) {
+                btn.classList.remove('active');
+                icon.className = 'far fa-heart';
+                btn.innerHTML = '<i class="far fa-heart"></i> إضافة للمفضلة';
+                alert('تمت الإزالة من المفضلة');
+            } else {
+                btn.classList.add('active');
+                icon.className = 'fas fa-heart';
+                btn.innerHTML = '<i class="fas fa-heart"></i> إزالة من المفضلة';
+                alert('تمت الإضافة إلى المفضلة');
+            }
+        }
+        
+        function downloadVideo() {
+            alert('سيبدأ تحميل الفيديو...');
+            // In a real site, this would trigger a download
+        }
+        
+        function shareVideo() {
+            if (navigator.share) {
+                navigator.share({
+                    title: document.getElementById('videoTitle').textContent,
+                    text: 'شاهد هذا الفيلم على أكوام',
+                    url: window.location.href
+                });
+            } else {
+                navigator.clipboard.writeText(window.location.href).then(() => {
+                    alert('تم نسخ رابط الفيديو');
+                });
+            }
+        }
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            const video = document.getElementById('videoPlayer');
+            
+            switch(e.key.toLowerCase()) {
+                case ' ':
+                case 'k':
+                    e.preventDefault();
+                    video.paused ? video.play() : video.pause();
+                    break;
+                case 'f':
+                    e.preventDefault();
+                    video.requestFullscreen();
+                    break;
+                case 'm':
+                    e.preventDefault();
+                    video.muted = !video.muted;
+                    break;
+                case 'arrowright':
+                    e.preventDefault();
+                    video.currentTime += 10;
+                    break;
+                case 'arrowleft':
+                    e.preventDefault();
+                    video.currentTime -= 10;
+                    break;
+            }
+        });
+        
+        // Show episode selector if URL has series parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('series')) {
+            document.getElementById('episodeSelector').style.display = 'block';
+            loadEpisodes();
+        }
+        
+        function loadEpisodes() {
+            const episodesGrid = document.getElementById('episodesGrid');
+            let episodesHTML = '';
+            
+            for (let i = 1; i <= 24; i++) {
+                episodesHTML += `
+                    <button class="episode-btn ${i === 1 ? 'active' : ''}" 
+                            onclick="playEpisode(${i})">
+                        ${i}
+                    </button>
+                `;
+            }
+            
+            episodesGrid.innerHTML = episodesHTML;
+        }
+        
+        function playEpisode(episodeNumber) {
+            // Remove active class from all buttons
+            document.querySelectorAll('.episode-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Add active class to clicked button
+            event.target.classList.add('active');
+            
+            // Add watched class
+            event.target.classList.add('watched');
+            
+            // Change video title
+            document.getElementById('videoTitle').textContent = 
+                `المسلسل الأول - الحلقة ${episodeNumber}`;
+            
+            // Here you would change the video source to the episode
+            alert(`تشغيل الحلقة ${episodeNumber}`);
+        }
+    </script>
+</body>
+</html>

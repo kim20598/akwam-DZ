@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الأفلام - أكوام</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/responsive.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="assets/images/favicon.ico" type="image/x-icon">
+</head>
+<body>
+    <header class="header">
+        <nav class="navbar">
+            <div class="container">
+                <div class="nav-brand">
+                    <a href="index.html" class="logo">
+                        <i class="fas fa-film"></i>
+                        <span>أكوام</span>
+                    </a>
+                </div>
+                
+                <div class="nav-menu">
+                    <ul class="nav-links">
+                        <li><a href="index.html"><i class="fas fa-home"></i> الرئيسية</a></li>
+                        <li><a href="movies.html" class="active"><i class="fas fa-video"></i> الأفلام</a></li>
+                        <li><a href="series.html"><i class="fas fa-tv"></i> المسلسلات</a></li>
+                        <li><a href="anime.html"><i class="fas fa-ghost"></i> الأنمي</a></li>
+                        <li><a href="shows.html"><i class="fas fa-play-circle"></i> العروض</a></li>
+                    </ul>
+                </div>
+                
+                <div class="nav-search">
+                    <div class="search-box">
+                        <input type="text" id="searchInput" placeholder="ابحث عن فيلم...">
+                        <button onclick="search()"><i class="fas fa-search"></i></button>
+                    </div>
+                </div>
+                
+                <button class="mobile-toggle" onclick="toggleMenu()">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </nav>
+    </header>
+
+    <main class="main-content">
+        <div class="container">
+            <!-- Page Header -->
+            <div class="page-header">
+                <h1><i class="fas fa-film"></i> جميع الأفلام</h1>
+                <p>استكشف مكتبتنا الواسعة من الأفلام العربية والتركية والأجنبية</p>
+            </div>
+
+            <!-- Filters -->
+            <div class="filters-section">
+                <div class="filters">
+                    <div class="filter-group">
+                        <label for="genreFilter"><i class="fas fa-tags"></i> النوع</label>
+                        <select id="genreFilter" class="filter-select">
+                            <option value="">جميع الأنواع</option>
+                            <option value="action">أكشن</option>
+                            <option value="comedy">كوميدي</option>
+                            <option value="drama">دراما</option>
+                            <option value="horror">رعب</option>
+                            <option value="romance">رومانسي</option>
+                            <option value="sci-fi">خيال علمي</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="yearFilter"><i class="fas fa-calendar"></i> السنة</label>
+                        <select id="yearFilter" class="filter-select">
+                            <option value="">جميع السنوات</option>
+                            <option value="2024">2024</option>
+                            <option value="2023">2023</option>
+                            <option value="2022">2022</option>
+                            <option value="2021">2021</option>
+                            <option value="2020">2020</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="languageFilter"><i class="fas fa-language"></i> اللغة</label>
+                        <select id="languageFilter" class="filter-select">
+                            <option value="">جميع اللغات</option>
+                            <option value="arabic">عربي</option>
+                            <option value="turkish">تركي</option>
+                            <option value="english">أجنبي</option>
+                            <option value="hindi">هندي</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="qualityFilter"><i class="fas fa-hd"></i> الجودة</label>
+                        <select id="qualityFilter" class="filter-select">
+                            <option value="">جميع الجودات</option>
+                            <option value="hd">HD</option>
+                            <option value="fhd">FHD</option>
+                            <option value="4k">4K</option>
+                        </select>
+                    </div>
+                    
+                    <button onclick="applyFilters()" class="btn btn-primary">
+                        <i class="fas fa-filter"></i> تطبيق الفلاتر
+                    </button>
+                    
+                    <button onclick="resetFilters()" class="btn btn-secondary">
+                        <i class="fas fa-redo"></i> إعادة التعيين
+                    </button>
+                </div>
+            </div>
+
+            <!-- Movies Grid -->
+            <section class="section">
+                <div class="section-header">
+                    <h2 class="section-title">الأفلام (<span id="moviesCount">24</span>)</h2>
+                    <div class="sort-options">
+                        <label for="sortBy">ترتيب حسب:</label>
+                        <select id="sortBy" class="sort-select" onchange="sortMovies()">
+                            <option value="newest">الأحدث</option>
+                            <option value="oldest">الأقدم</option>
+                            <option value="rating">التقييم</option>
+                            <option value="name">الإسم من أ-ي</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="movies-grid" id="moviesGrid">
+                    <!-- 24 Movie Cards -->
+                    <div class="movie-card">
+                        <a href="watch.html?id=1">
+                            <div class="movie-poster">
+                                <img src="https://via.placeholder.com/300x450/CCCCCC/333333?text=فيلم+1" alt="فيلم 1">
+                                <div class="movie-overlay">
+                                    <i class="fas fa-play"></i>
+                                </div>
+                                <span class="movie-quality">HD</span>
+                            </div>
+                            <div class="movie-info">
+                                <h3 class="movie-title">فيلم الأكشن الأول</h3>
+                                <div class="movie-meta">
+                                    <span class="movie-type">فيلم</span>
+                                    <span>2024</span>
+                                    <span><i class="fas fa-star"></i> 8.5</span>
+                                </div>
+                                <div class="movie-tags">
+                                    <span class="movie-tag">أكشن</span>
+                                    <span class="movie-tag">عربي</span>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    
+                    <!-- Repeat 23 more movie cards with different data -->
+                    <div class="movie-card">
+                        <a href="watch.html?id=2">
+                            <div class="movie-poster">
+                                <img src="https://via.placeholder.com/300x450/CCCCCC/333333?text=فيلم+2" alt="فيلم 2">
+                                <div class="movie-overlay">
+                                    <i class="fas fa-play"></i>
+                                </div>
+                                <span class="movie-quality">FHD</span>
+                            </div>
+                            <div class="movie-info">
+                                <h3 class="movie-title">الكوميديا المضحكة</h3>
+                                <div class="movie-meta">
+                                    <span class="movie-type">فيلم</span>
+                                    <span>2023</span>
+                                    <span><i class="fas fa-star"></i> 7.8</span>
+                                </div>
+                                <div class="movie-tags">
+                                    <span class="movie-tag">كوميدي</span>
+                                    <span class="movie-tag">عربي</span>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    
+                    <div class="movie-card">
+                        <a href="watch.html?id=3">
+                            <div class="movie-poster">
+                                <img src="https://via.placeholder.com/300x450/CCCCCC/333333?text=فيلم+3" alt="فيلم 3">
+                                <div class="movie-overlay">
+                                    <i class="fas fa-play"></i>
+                                </div>
+                                <span class="movie-quality">4K</span>
+                            </div>
+                            <div class="movie-info">
+                                <h3 class="movie-title">الدراما العاطفية</h3>
+                                <div class="movie-meta">
+                                    <span class="movie-type">فيلم</span>
+                                    <span>2024</span>
+                                    <span><i class="fas fa-star"></i> 9.0</span>
+                                </div>
+                                <div class="movie-tags">
+                                    <span class="movie-tag">دراما</span>
+                                    <span class="movie-tag">تركي</span>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    
+                    <!-- Add 21 more movie cards here -->
+                    <!-- For brevity, I'll show a few more examples -->
+                    
+                    <div class="movie-card">
+                        <a href="watch.html?id=24">
+                            <div class="movie-poster">
+                                <img src="https://via.placeholder.com/300x450/CCCCCC/333333?text=فيلم+24" alt="فيلم 24">
+                                <div class="movie-overlay">
+                                    <i class="fas fa-play"></i>
+                                </div>
+                                <span class="movie-quality">HD</span>
+                            </div>
+                            <div class="movie-info">
+                                <h3 class="movie-title">الفيلم الرابع والعشرون</h3>
+                                <div class="movie-meta">
+                                    <span class="movie-type">فيلم</span>
+                                    <span>2022</span>
+                                    <span><i class="fas fa-star"></i> 8.1</span>
+                                </div>
+                                <div class="movie-tags">
+                                    <span class="movie-tag">رعب</span>
+                                    <span class="movie-tag">أجنبي</span>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- Pagination -->
+                <div class="pagination">
+                    <button class="pagination-btn disabled">
+                        <i class="fas fa-chevron-right"></i> السابق
+                    </button>
+                    
+                    <button class="pagination-btn active">1</button>
+                    <button class="pagination-btn" onclick="goToPage(2)">2</button>
+                    <button class="pagination-btn" onclick="goToPage(3)">3</button>
+                    <button class="pagination-btn" onclick="goToPage(4)">4</button>
+                    <button class="pagination-btn" onclick="goToPage(5)">5</button>
+                    
+                    <button class="pagination-btn" onclick="goToPage(2)">
+                        التالي <i class="fas fa-chevron-left"></i>
+                    </button>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <!-- Same footer as index.html -->
+                <div class="footer-section">
+                    <h3>أكوام</h3>
+                    <p>منصة مشاهدة الأفلام والمسلسلات العربية والتركية والأجنبية مجاناً وبجودة عالية.</p>
+                    <div class="social-links">
+                        <a href="#"><i class="fab fa-facebook"></i></a>
+                        <a href="#"><i class="fab fa-twitter"></i></a>
+                        <a href="#"><i class="fab fa-telegram"></i></a>
+                        <a href="#"><i class="fab fa-youtube"></i></a>
+                    </div>
+                </div>
+                
+                <div class="footer-section">
+                    <h3>روابط سريعة</h3>
+                    <ul>
+                        <li><a href="index.html">الرئيسية</a></li>
+                        <li><a href="movies.html">الأفلام</a></li>
+                        <li><a href="series.html">المسلسلات</a></li>
+                        <li><a href="shows.html">العروض</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-section">
+                    <h3>الدعم</h3>
+                    <ul>
+                        <li><a href="contact.html">اتصل بنا</a></li>
+                        <li><a href="privacy.html">سياسة الخصوصية</a></li>
+                        <li><a href="terms.html">شروط الاستخدام</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="footer-bottom">
+                <p>© 2024 أكوام. جميع الحقوق محفوظة.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/main.js"></script>
+    <script>
+        function applyFilters() {
+            // Filter logic would go here
+            alert('تم تطبيق الفلاتر');
+        }
+        
+        function resetFilters() {
+            document.getElementById('genreFilter').value = '';
+            document.getElementById('yearFilter').value = '';
+            document.getElementById('languageFilter').value = '';
+            document.getElementById('qualityFilter').value = '';
+            alert('تم إعادة تعيين الفلاتر');
+        }
+        
+        function sortMovies() {
+            const sortBy = document.getElementById('sortBy').value;
+            alert(`تم الترتيب حسب: ${sortBy}`);
+        }
+        
+        function goToPage(page) {
+            alert(`الذهاب إلى الصفحة ${page}`);
+        }
+        
+        function search() {
+            const query = document.getElementById('searchInput').value;
+            if (query.trim() !== '') {
+                window.location.href = `search.html?q=${encodeURIComponent(query)}`;
+            }
+        }
+        
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                search();
+            }
+        });
+    </script>
+</body>
+</html>
