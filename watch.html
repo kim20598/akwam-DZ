@@ -274,4 +274,508 @@
                 
                 <button class="mobile-toggle" onclick="toggleMenu()">
                     <i class="fas fa-bars"></i>
-                </
+                </button>
+            </div>
+        </nav>
+    </header>
+
+    <main class="watch-container">
+        <div class="container">
+            <!-- Video Player -->
+            <div class="video-player">
+                <div class="video-wrapper">
+                    <div class="loading-player" id="playerLoading">
+                        <div class="spinner"></div>
+                        <p>جاري تحميل الفيديو من أكوام...</p>
+                    </div>
+                    <video id="videoPlayer" controls>
+                        <!-- Video source will be added by JavaScript -->
+                    </video>
+                </div>
+            </div>
+            
+            <!-- Video Info -->
+            <div class="video-info" id="videoInfo">
+                <!-- Content will be loaded by JavaScript -->
+            </div>
+            
+            <!-- Related Content -->
+            <div class="related-content" id="relatedContent" style="display: none;">
+                <!-- Will be loaded if available -->
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-bottom">
+                <p>© 2024 أكوام حقيقي - محتوى من <a href="https://ak.sv" target="_blank">ak.sv</a></p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/main.js"></script>
+    <script src="js/scraper.js"></script>
+    <script>
+        // Get content URL from query parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const contentUrl = urlParams.get('url');
+        const contentType = urlParams.get('type') || 'movie';
+        
+        // Global variables
+        let videoSources = [];
+        let contentDetails = null;
+        let currentSourceIndex = 0;
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            if (!contentUrl) {
+                showError('لم يتم تحديد رابط المحتوى');
+                return;
+            }
+            
+            try {
+                // Show loading
+                document.getElementById('playerLoading').style.display = 'block';
+                
+                // Fetch content details
+                contentDetails = await akwamScraper.getContentDetails(contentUrl);
+                
+                if (!contentDetails) {
+                    throw new Error('Failed to load content details');
+                }
+                
+                // Update page title and info
+                document.title = `${contentDetails.title} - أكوام`;
+                renderContentInfo(contentDetails);
+                
+                // Fetch video sources
+                videoSources = await akwamScraper.getVideoSources(contentUrl);
+                
+                if (videoSources.length === 0) {
+                    // Try to get sources from first episode if series
+                    if (contentDetails.episodes && contentDetails.episodes.length > 0) {
+                        const firstEpisode = contentDetails.episodes[0];
+                        videoSources = await akwamScraper.getVideoSources(firstEpisode.url);
+                    }
+                }
+                
+                if (videoSources.length > 0) {
+                    setupVideoPlayer();
+                } else {
+                    showNoSources();
+                }
+                
+                // Setup episode selector if series
+                if (contentDetails.episodes && contentDetails.episodes.length > 0) {
+                    setupEpisodeSelector();
+                }
+                
+            } catch (error) {
+                console.error('Error loading content:', error);
+                showError('فشل في تحميل المحتوى. حاول مرة أخرى.');
+            } finally {
+                document.getElementById('playerLoading').style.display = 'none';
+            }
+        });
+
+        function renderContentInfo(details) {
+            const videoInfo = document.getElementById('videoInfo');
+            
+            let html = `
+                <h1 class="video-title">${details.title}</h1>
+                
+                <div class="video-meta">
+                    ${details.year ? `<span><i class="fas fa-calendar"></i> ${details.year}</span>` : ''}
+                    <span><i class="fas fa-${details.type === 'movie' ? 'film' : 'tv'}"></i> 
+                        ${details.type === 'movie' ? 'فيلم' : 'مسلسل'}
+                    </span>
+                    ${details.quality ? `<span><i class="fas fa-hd"></i> ${details.quality}</span>` : ''}
+                </div>
+                
+                ${details.description ? `<p class="video-description">${details.description}</p>` : ''}
+                
+                <div class="video-controls">
+                    <button class="btn-download" onclick="downloadVideo()">
+                        <i class="fas fa-download"></i> تحميل
+                    </button>
+                    <button class="btn-share" onclick="shareVideo()">
+                        <i class="fas fa-share"></i> مشاركة
+                    </button>
+                    <button class="btn-favorite" id="favoriteBtn" onclick="toggleFavorite()">
+                        <i class="far fa-heart"></i> إضافة للمفضلة
+                    </button>
+                </div>
+            `;
+            
+            videoInfo.innerHTML = html;
+        }
+
+        function setupVideoPlayer() {
+            const videoPlayer = document.getElementById('videoPlayer');
+            
+            if (videoSources.length === 0) {
+                showNoSources();
+                return;
+            }
+            
+            // Clear existing sources
+            while (videoPlayer.firstChild) {
+                videoPlayer.removeChild(videoPlayer.firstChild);
+            }
+            
+            // Add sources
+            videoSources.forEach((source, index) => {
+                if (source.type.includes('video')) {
+                    const sourceElement = document.createElement('source');
+                    sourceElement.src = source.url;
+                    sourceElement.type = source.type;
+                    if (source.quality) {
+                        sourceElement.setAttribute('data-quality', source.quality);
+                    }
+                    videoPlayer.appendChild(sourceElement);
+                }
+            });
+            
+            // Add quality selector if multiple sources
+            if (videoSources.length > 1) {
+                addQualitySelector();
+            }
+            
+            // Load the video
+            videoPlayer.load();
+            
+            // Add event listeners
+            videoPlayer.addEventListener('loadeddata', function() {
+                console.log('Video loaded successfully');
+            });
+            
+            videoPlayer.addEventListener('error', function(e) {
+                console.error('Video error:', e);
+                tryNextSource();
+            });
+            
+            // Add keyboard shortcuts
+            setupKeyboardShortcuts();
+        }
+
+        function addQualitySelector() {
+            const videoInfo = document.getElementById('videoInfo');
+            const qualities = [...new Set(videoSources.map(s => s.quality || 'HD'))];
+            
+            let html = `
+                <div class="quality-selector">
+                    <h3><i class="fas fa-hd"></i> جودة الفيديو</h3>
+                    <div class="quality-buttons">
+            `;
+            
+            qualities.forEach((quality, index) => {
+                html += `
+                    <button class="quality-btn ${index === 0 ? 'active' : ''}" 
+                            onclick="changeQuality(${index})">
+                        ${quality}
+                    </button>
+                `;
+            });
+            
+            html += `
+                    </div>
+                </div>
+            `;
+            
+            videoInfo.querySelector('.video-controls').insertAdjacentHTML('beforebegin', html);
+        }
+
+        function changeQuality(index) {
+            const videoPlayer = document.getElementById('videoPlayer');
+            const sources = videoPlayer.querySelectorAll('source');
+            
+            if (index < sources.length) {
+                // Update active button
+                document.querySelectorAll('.quality-btn').forEach((btn, i) => {
+                    btn.classList.toggle('active', i === index);
+                });
+                
+                // Change source
+                const currentTime = videoPlayer.currentTime;
+                const wasPlaying = !videoPlayer.paused;
+                
+                videoPlayer.src = sources[index].src;
+                videoPlayer.load();
+                
+                // Restore time and play state
+                videoPlayer.currentTime = currentTime;
+                if (wasPlaying) {
+                    videoPlayer.play().catch(e => console.log('Auto-play prevented:', e));
+                }
+                
+                showNotification(`تم تغيير الجودة إلى ${sources[index].getAttribute('data-quality') || 'HD'}`);
+            }
+        }
+
+        function tryNextSource() {
+            currentSourceIndex++;
+            if (currentSourceIndex < videoSources.length) {
+                const videoPlayer = document.getElementById('videoPlayer');
+                videoPlayer.src = videoSources[currentSourceIndex].url;
+                videoPlayer.load();
+                showNotification(`جرب مصدر بديل ${currentSourceIndex + 1}/${videoSources.length}`);
+            } else {
+                showError('لا توجد مصادر فيديو تعمل');
+            }
+        }
+
+        function setupEpisodeSelector() {
+            const videoInfo = document.getElementById('videoInfo');
+            
+            let html = `
+                <div class="episode-selector">
+                    <h3><i class="fas fa-list"></i> قائمة الحلقات (${contentDetails.episodes.length})</h3>
+                    <div class="episodes-grid">
+            `;
+            
+            contentDetails.episodes.forEach((episode, index) => {
+                html += `
+                    <button class="episode-btn ${index === 0 ? 'active' : ''}" 
+                            onclick="loadEpisode('${encodeURIComponent(episode.url)}', ${index})"
+                            title="${episode.title}">
+                        ${index + 1}
+                    </button>
+                `;
+            });
+            
+            html += `
+                    </div>
+                </div>
+            `;
+            
+            videoInfo.querySelector('.video-controls').insertAdjacentHTML('beforebegin', html);
+        }
+
+        async function loadEpisode(episodeUrl, episodeIndex) {
+            try {
+                document.getElementById('playerLoading').style.display = 'block';
+                
+                // Update active episode button
+                document.querySelectorAll('.episode-btn').forEach((btn, index) => {
+                    btn.classList.toggle('active', index === episodeIndex);
+                    if (index < episodeIndex) {
+                        btn.classList.add('watched');
+                    }
+                });
+                
+                // Fetch video sources for this episode
+                const decodedUrl = decodeURIComponent(episodeUrl);
+                videoSources = await akwamScraper.getVideoSources(decodedUrl);
+                
+                if (videoSources.length > 0) {
+                    setupVideoPlayer();
+                    
+                    // Update episode title
+                    const episode = contentDetails.episodes[episodeIndex];
+                    document.querySelector('.video-title').textContent = episode.title;
+                    
+                    // Update URL
+                    const newUrl = new URL(window.location);
+                    newUrl.searchParams.set('url', decodedUrl);
+                    window.history.replaceState({}, '', newUrl);
+                    
+                    showNotification(`تحميل الحلقة ${episodeIndex + 1}`);
+                } else {
+                    showError('لا توجد مصادر لهذه الحلقة');
+                }
+                
+            } catch (error) {
+                console.error('Error loading episode:', error);
+                showError('فشل تحميل الحلقة');
+            } finally {
+                document.getElementById('playerLoading').style.display = 'none';
+            }
+        }
+
+        function setupKeyboardShortcuts() {
+            document.addEventListener('keydown', function(e) {
+                const videoPlayer = document.getElementById('videoPlayer');
+                if (!videoPlayer) return;
+                
+                // Don't trigger when typing
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+                
+                switch(e.key.toLowerCase()) {
+                    case ' ':
+                    case 'k':
+                        e.preventDefault();
+                        videoPlayer.paused ? videoPlayer.play() : videoPlayer.pause();
+                        break;
+                    case 'f':
+                        e.preventDefault();
+                        if (videoPlayer.requestFullscreen) {
+                            videoPlayer.requestFullscreen();
+                        }
+                        break;
+                    case 'm':
+                        e.preventDefault();
+                        videoPlayer.muted = !videoPlayer.muted;
+                        break;
+                    case 'arrowright':
+                        e.preventDefault();
+                        videoPlayer.currentTime += 10;
+                        break;
+                    case 'arrowleft':
+                        e.preventDefault();
+                        videoPlayer.currentTime -= 10;
+                        break;
+                    case 'arrowup':
+                        e.preventDefault();
+                        videoPlayer.volume = Math.min(1, videoPlayer.volume + 0.1);
+                        break;
+                    case 'arrowdown':
+                        e.preventDefault();
+                        videoPlayer.volume = Math.max(0, videoPlayer.volume - 0.1);
+                        break;
+                    case 'n':
+                        if (contentDetails.episodes) {
+                            const currentEpisode = Array.from(document.querySelectorAll('.episode-btn'))
+                                .findIndex(btn => btn.classList.contains('active'));
+                            if (currentEpisode < contentDetails.episodes.length - 1) {
+                                loadEpisode(encodeURIComponent(contentDetails.episodes[currentEpisode + 1].url), currentEpisode + 1);
+                            }
+                        }
+                        break;
+                    case 'p':
+                        if (contentDetails.episodes) {
+                            const currentEpisode = Array.from(document.querySelectorAll('.episode-btn'))
+                                .findIndex(btn => btn.classList.contains('active'));
+                            if (currentEpisode > 0) {
+                                loadEpisode(encodeURIComponent(contentDetails.episodes[currentEpisode - 1].url), currentEpisode - 1);
+                            }
+                        }
+                        break;
+                }
+            });
+        }
+
+        function downloadVideo() {
+            if (videoSources.length > 0) {
+                const link = document.createElement('a');
+                link.href = videoSources[0].url;
+                link.download = `${contentDetails.title}.mp4`;
+                link.target = '_blank';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                showNotification('بدأ التحميل، قد يطلب المتصفح التأكيد');
+            } else {
+                showError('لا يوجد فيديو للتحميل');
+            }
+        }
+
+        function shareVideo() {
+            const title = contentDetails?.title || 'مشاهدة على أكوام';
+            const url = window.location.href;
+            
+            if (navigator.share) {
+                navigator.share({
+                    title: title,
+                    text: 'شاهد هذا المحتوى على أكوام الحقيقي',
+                    url: url
+                });
+            } else {
+                navigator.clipboard.writeText(url).then(() => {
+                    showNotification('تم نسخ رابط المشاهدة');
+                });
+            }
+        }
+
+        function toggleFavorite() {
+            const btn = document.getElementById('favoriteBtn');
+            const icon = btn.querySelector('i');
+            
+            if (btn.classList.contains('active')) {
+                btn.classList.remove('active');
+                icon.className = 'far fa-heart';
+                showNotification('تمت الإزالة من المفضلة');
+            } else {
+                btn.classList.add('active');
+                icon.className = 'fas fa-heart';
+                showNotification('تمت الإضافة إلى المفضلة');
+            }
+        }
+
+        function showNoSources() {
+            const videoInfo = document.getElementById('videoInfo');
+            const noSourcesHTML = `
+                <div class="no-sources">
+                    <i class="fas fa-video-slash"></i>
+                    <h3>لا توجد مصادر فيديو متاحة</h3>
+                    <p>تعذر العثور على مصادر فيديو لهذا المحتوى.</p>
+                    <p>يمكنك:</p>
+                    <div class="video-controls" style="margin-top: 20px;">
+                        <button class="btn-primary" onclick="window.history.back()">
+                            <i class="fas fa-arrow-right"></i> العودة
+                        </button>
+                        <button class="btn-secondary" onclick="location.reload()">
+                            <i class="fas fa-redo"></i> إعادة المحاولة
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            videoInfo.insertAdjacentHTML('beforeend', noSourcesHTML);
+        }
+
+        function showError(message) {
+            const videoInfo = document.getElementById('videoInfo');
+            const errorHTML = `
+                <div class="no-sources">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <h3>حدث خطأ</h3>
+                    <p>${message}</p>
+                    <div class="video-controls" style="margin-top: 20px;">
+                        <button class="btn-primary" onclick="location.reload()">
+                            <i class="fas fa-redo"></i> إعادة التحميل
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            videoInfo.innerHTML = errorHTML;
+        }
+
+        function showNotification(message) {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = 'player-notification';
+            notification.textContent = message;
+            notification.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                padding: 12px 20px;
+                background: var(--primary-color);
+                color: white;
+                border-radius: 5px;
+                z-index: 10000;
+                opacity: 0;
+                transform: translateY(20px);
+                transition: all 0.3s;
+                font-weight: bold;
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Animate in
+            setTimeout(() => {
+                notification.style.opacity = '1';
+                notification.style.transform = 'translateY(0)';
+            }, 10);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                notification.style.transform = 'translateY(20px)';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
