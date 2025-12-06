@@ -27,25 +27,13 @@
                         <li><a href="index.html" class="active"><i class="fas fa-home"></i> الرئيسية</a></li>
                         <li><a href="movies.html"><i class="fas fa-video"></i> الأفلام</a></li>
                         <li><a href="series.html"><i class="fas fa-tv"></i> المسلسلات</a></li>
-                        <li><a href="anime.html"><i class="fas fa-ghost"></i> الأنمي</a></li>
-                        <li><a href="shows.html"><i class="fas fa-play-circle"></i> العروض</a></li>
-                        <li class="dropdown">
-                            <a href="#"><i class="fas fa-bars"></i> الأقسام <i class="fas fa-chevron-down"></i></a>
-                            <div class="dropdown-content">
-                                <a href="category.html?cat=arabic">عربي</a>
-                                <a href="category.html?cat=turkish">تركي</a>
-                                <a href="category.html?cat=asian">اسيوي</a>
-                                <a href="category.html?cat=foreign">أجنبي</a>
-                                <a href="category.html?cat=indian">هندي</a>
-                            </div>
-                        </li>
                     </ul>
                 </div>
                 
                 <div class="nav-search">
                     <div class="search-box">
                         <input type="text" id="searchInput" placeholder="ابحث عن فيلم أو مسلسل...">
-                        <button onclick="search()"><i class="fas fa-search"></i></button>
+                        <button onclick="searchContent()"><i class="fas fa-search"></i></button>
                     </div>
                 </div>
                 
@@ -61,11 +49,13 @@
         <div class="hero-slider">
             <div class="slide active">
                 <div class="slide-content">
-                    <h1 class="hero-title">مشاهدة الأفلام والمسلسلات مجاناً</h1>
-                    <p class="hero-subtitle">أكبر مكتبة عربية للأفلام والمسلسلات التركية والاسيوية والعربية</p>
+                    <h1 class="hero-title">أكوام - مشاهدة حقيقية</h1>
+                    <p class="hero-subtitle">محتوى حقيقي من موقع أكوام الأصلي - أفلام ومسلسلات حديثة</p>
                     <div class="hero-buttons">
-                        <a href="movies.html" class="btn btn-primary"><i class="fas fa-play"></i> ابدأ المشاهدة</a>
-                        <a href="#trending" class="btn btn-secondary"><i class="fas fa-fire"></i> الأعلى تقييماً</a>
+                        <a href="#content" class="btn btn-primary"><i class="fas fa-play"></i> ابدأ المشاهدة</a>
+                        <button onclick="loadRealContent()" class="btn btn-secondary">
+                            <i class="fas fa-sync"></i> تحديث المحتوى
+                        </button>
                     </div>
                 </div>
             </div>
@@ -75,462 +65,29 @@
     <!-- Main Content -->
     <main class="main-content">
         <div class="container">
-            <!-- Featured Movies -->
-            <section class="section">
-                <div class="section-header">
-                    <h2 class="section-title"><i class="fas fa-star"></i> مميز اليوم</h2>
-                    <a href="movies.html?filter=featured" class="view-all">عرض الكل <i class="fas fa-arrow-left"></i></a>
-                </div>
-                <div class="movies-grid">
-                    <!-- Movie 1 -->
-                    <div class="movie-card">
-                        <a href="watch.html?id=1">
-                            <div class="movie-poster">
-                                <img src="https://via.placeholder.com/300x450/CCCCCC/333333?text=فيلم+1" alt="فيلم 1">
-                                <div class="movie-overlay">
-                                    <i class="fas fa-play"></i>
-                                </div>
-                                <span class="movie-quality">HD</span>
-                            </div>
-                            <div class="movie-info">
-                                <h3 class="movie-title">الفيلم الأول</h3>
-                                <div class="movie-meta">
-                                    <span class="movie-type">فيلم</span>
-                                    <span>2024</span>
-                                    <span><i class="fas fa-star"></i> 8.5</span>
-                                </div>
-                            </div>
-                        </a>
-                    </div>
-                    
-                    <!-- Movie 2 -->
-                    <div class="movie-card">
-                        <a href="watch.html?id=2">
-                            <div class="movie-poster">
-                                <img src="https://via.placeholder.com/300x450/CCCCCC/333333?text=فيلم+2" alt="فيلم 2">
-                                <div class="movie-overlay">
-                                    <i class="fas fa-play"></i>
-                                </div>
-                                <span class="movie-quality">FHD</span>
-                            </div>
-                            <div class="movie-info">
-                                <h3 class="movie-title">الفيلم الثاني</h3>
-                                <div class="movie-meta">
-                                    <span class="movie-type">فيلم</span>
-                                    <span>2023</span>
-                                    <span><i class="fas fa-star"></i> 7.8</span>
-                                </div>
-                            </div>
-                        </a>
-                    </div>
-                    
-                    <!-- Movie 3 -->
-                    <div class="movie-card">
-                        <a href="watch.html?id=3">
-                            <div class="movie-poster">
-                                <img src="https://via.placeholder.com/300x450/CCCCCC/333333?text=فيلم+3" alt="فيلم 3">
-                                <div class="movie-overlay">
-                                    <i class="fas fa-play"></i>
-                                </div>
-                                <span class="movie-quality">4K</span>
-                            </div>
-                            <div class="movie-info">
-                                <h3 class="movie-title">الفيلم الثالث</h3>
-                                <div class="movie-meta">
-                                    <span class="movie-type">فيلم</span>
-                                    <span>2024</span>
-                                    <span><i class="fas fa-star"></i> 9.0</span>
-                                </div>
-                            </div>
-                        </a>
-                    </div>
-                    
-                    <!-- Movie 4 -->
-                    <div class="movie-card">
-                        <a href="watch.html?id=4">
-                            <div class="movie-poster">
-                                <img src="https://via.placeholder.com/300x450/CCCCCC/333333?text=فيلم+4" alt="فيلم 4">
-                                <div class="movie-overlay">
-                                    <i class="fas fa-play"></i>
-                                </div>
-                                <span class="movie-quality">HD</span>
-                            </div>
-                            <div class="movie-info">
-                                <h3 class="movie-title">الفيلم الرابع</h3>
-                                <div class="movie-meta">
-                                    <span class="movie-type">فيلم</span>
-                                    <span>2023</span>
-                                    <span><i class="fas fa-star"></i> 8.2</span>
-                                </div>
-                            </div>
-                        </a>
-                    </div>
-                    
-                    <!-- Movie 5 -->
-                    <div class="movie-card">
-                        <a href="watch.html?id=5">
-                            <div class="movie-poster">
-                                <img src="https://via.placeholder.com/300x450/CCCCCC/333333?text=فيلم+5" alt="فيلم 5">
-                                <div class="movie-overlay">
-                                    <i class="fas fa-play"></i>
-                                </div>
-                                <span class="movie-quality">FHD</span>
-                            </div>
-                            <div class="movie-info">
-                                <h3 class="movie-title">الفيلم الخامس</h3>
-                                <div class="movie-meta">
-                                    <span class="movie-type">فيلم</span>
-                                    <span>2024</span>
-                                    <span><i class="fas fa-star"></i> 7.5</span>
-                                </div>
-                            </div>
-                        </a>
-                    </div>
-                    
-                    <!-- Movie 6 -->
-                    <div class="movie-card">
-                        <a href="watch.html?id=6">
-                            <div class="movie-poster">
-                                <img src="https://via.placeholder.com/300x450/CCCCCC/333333?text=فيلم+6" alt="فيلم 6">
-                                <div class="movie-overlay">
-                                    <i class="fas fa-play"></i>
-                                </div>
-                                <span class="movie-quality">HD</span>
-                            </div>
-                            <div class="movie-info">
-                                <h3 class="movie-title">الفيلم السادس</h3>
-                                <div class="movie-meta">
-                                    <span class="movie-type">فيلم</span>
-                                    <span>2022</span>
-                                    <span><i class="fas fa-star"></i> 8.9</span>
-                                </div>
-                            </div>
-                        </a>
-                    </div>
-                </div>
-            </section>
+            <!-- Loading Indicator -->
+            <div id="loadingIndicator" class="loading-spinner">
+                <div class="spinner"></div>
+                <p>جاري تحميل المحتوى من أكوام...</p>
+            </div>
 
-            <!-- Latest Movies -->
-            <section class="section">
-                <div class="section-header">
-                    <h2 class="section-title"><i class="fas fa-film"></i> أحدث الأفلام</h2>
-                    <a href="movies.html" class="view-all">عرض الكل <i class="fas fa-arrow-left"></i></a>
-                </div>
-                <div class="movies-grid">
-                    <!-- Repeat 6 movie cards similar to above -->
-                    <div class="movie-card">
-                        <a href="watch.html?id=7">
-                            <div class="movie-poster">
-                                <img src="https://via.placeholder.com/300x450/CCCCCC/333333?text=فيلم+جديد+1" alt="فيلم جديد 1">
-                                <div class="movie-overlay">
-                                    <i class="fas fa-play"></i>
-                                </div>
-                                <span class="movie-quality">HD</span>
-                            </div>
-                            <div class="movie-info">
-                                <h3 class="movie-title">فيلم جديد 1</h3>
-                                <div class="movie-meta">
-                                    <span class="movie-type">فيلم</span>
-                                    <span>2024</span>
-                                    <span><i class="fas fa-star"></i> 8.0</span>
-                                </div>
-                            </div>
-                        </a>
-                    </div>
-                    
-                    <div class="movie-card">
-                        <a href="watch.html?id=8">
-                            <div class="movie-poster">
-                                <img src="https://via.placeholder.com/300x450/CCCCCC/333333?text=فيلم+جديد+2" alt="فيلم جديد 2">
-                                <div class="movie-overlay">
-                                    <i class="fas fa-play"></i>
-                                </div>
-                                <span class="movie-quality">FHD</span>
-                            </div>
-                            <div class="movie-info">
-                                <h3 class="movie-title">فيلم جديد 2</h3>
-                                <div class="movie-meta">
-                                    <span class="movie-type">فيلم</span>
-                                    <span>2024</span>
-                                    <span><i class="fas fa-star"></i> 7.2</span>
-                                </div>
-                            </div>
-                        </a>
-                    </div>
-                    
-                    <div class="movie-card">
-                        <a href="watch.html?id=9">
-                            <div class="movie-poster">
-                                <img src="https://via.placeholder.com/300x450/CCCCCC/333333?text=فيلم+جديد+3" alt="فيلم جديد 3">
-                                <div class="movie-overlay">
-                                    <i class="fas fa-play"></i>
-                                </div>
-                                <span class="movie-quality">HD</span>
-                            </div>
-                            <div class="movie-info">
-                                <h3 class="movie-title">فيلم جديد 3</h3>
-                                <div class="movie-meta">
-                                    <span class="movie-type">فيلم</span>
-                                    <span>2024</span>
-                                    <span><i class="fas fa-star"></i> 8.5</span>
-                                </div>
-                            </div>
-                        </a>
-                    </div>
-                    
-                    <div class="movie-card">
-                        <a href="watch.html?id=10">
-                            <div class="movie-poster">
-                                <img src="https://via.placeholder.com/300x450/CCCCCC/333333?text=فيلم+جديد+4" alt="فيلم جديد 4">
-                                <div class="movie-overlay">
-                                    <i class="fas fa-play"></i>
-                                </div>
-                                <span class="movie-quality">4K</span>
-                            </div>
-                            <div class="movie-info">
-                                <h3 class="movie-title">فيلم جديد 4</h3>
-                                <div class="movie-meta">
-                                    <span class="movie-type">فيلم</span>
-                                    <span>2024</span>
-                                    <span><i class="fas fa-star"></i> 9.1</span>
-                                </div>
-                            </div>
-                        </a>
-                    </div>
-                    
-                    <div class="movie-card">
-                        <a href="watch.html?id=11">
-                            <div class="movie-poster">
-                                <img src="https://via.placeholder.com/300x450/CCCCCC/333333?text=فيلم+جديد+5" alt="فيلم جديد 5">
-                                <div class="movie-overlay">
-                                    <i class="fas fa-play"></i>
-                                </div>
-                                <span class="movie-quality">HD</span>
-                            </div>
-                            <div class="movie-info">
-                                <h3 class="movie-title">فيلم جديد 5</h3>
-                                <div class="movie-meta">
-                                    <span class="movie-type">فيلم</span>
-                                    <span>2024</span>
-                                    <span><i class="fas fa-star"></i> 7.8</span>
-                                </div>
-                            </div>
-                        </a>
-                    </div>
-                    
-                    <div class="movie-card">
-                        <a href="watch.html?id=12">
-                            <div class="movie-poster">
-                                <img src="https://via.placeholder.com/300x450/CCCCCC/333333?text=فيلم+جديد+6" alt="فيلم جديد 6">
-                                <div class="movie-overlay">
-                                    <i class="fas fa-play"></i>
-                                </div>
-                                <span class="movie-quality">FHD</span>
-                            </div>
-                            <div class="movie-info">
-                                <h3 class="movie-title">فيلم جديد 6</h3>
-                                <div class="movie-meta">
-                                    <span class="movie-type">فيلم</span>
-                                    <span>2024</span>
-                                    <span><i class="fas fa-star"></i> 8.3</span>
-                                </div>
-                            </div>
-                        </a>
-                    </div>
-                </div>
-            </section>
+            <!-- Content Sections -->
+            <div id="contentSections"></div>
 
-            <!-- Latest Series -->
-            <section class="section">
-                <div class="section-header">
-                    <h2 class="section-title"><i class="fas fa-tv"></i> أحدث المسلسلات</h2>
-                    <a href="series.html" class="view-all">عرض الكل <i class="fas fa-arrow-left"></i></a>
+            <!-- Error Message -->
+            <div id="errorMessage" class="error-message" style="display: none;">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h3>حدث خطأ في تحميل المحتوى</h3>
+                <p>قد يكون هناك مشكلة في الاتصال أو تم حظر الموقع. حاول:</p>
+                <div class="error-actions">
+                    <button onclick="loadRealContent()" class="btn btn-primary">
+                        <i class="fas fa-redo"></i> إعادة المحاولة
+                    </button>
+                    <button onclick="useFallbackContent()" class="btn btn-secondary">
+                        <i class="fas fa-eye"></i> عرض محتوى تجريبي
+                    </button>
                 </div>
-                <div class="movies-grid">
-                    <!-- Series cards similar to movies -->
-                    <div class="movie-card">
-                        <a href="watch.html?id=13">
-                            <div class="movie-poster">
-                                <img src="https://via.placeholder.com/300x450/CCCCCC/333333?text=مسلسل+1" alt="مسلسل 1">
-                                <div class="movie-overlay">
-                                    <i class="fas fa-play"></i>
-                                </div>
-                                <span class="movie-quality">HD</span>
-                                <span class="movie-episodes">24 حلقة</span>
-                            </div>
-                            <div class="movie-info">
-                                <h3 class="movie-title">المسلسل الأول</h3>
-                                <div class="movie-meta">
-                                    <span class="movie-type">مسلسل</span>
-                                    <span>2024</span>
-                                    <span><i class="fas fa-star"></i> 9.2</span>
-                                </div>
-                            </div>
-                        </a>
-                    </div>
-                    
-                    <div class="movie-card">
-                        <a href="watch.html?id=14">
-                            <div class="movie-poster">
-                                <img src="https://via.placeholder.com/300x450/CCCCCC/333333?text=مسلسل+2" alt="مسلسل 2">
-                                <div class="movie-overlay">
-                                    <i class="fas fa-play"></i>
-                                </div>
-                                <span class="movie-quality">FHD</span>
-                                <span class="movie-episodes">16 حلقة</span>
-                            </div>
-                            <div class="movie-info">
-                                <h3 class="movie-title">المسلسل الثاني</h3>
-                                <div class="movie-meta">
-                                    <span class="movie-type">مسلسل</span>
-                                    <span>2024</span>
-                                    <span><i class="fas fa-star"></i> 8.7</span>
-                                </div>
-                            </div>
-                        </a>
-                    </div>
-                    
-                    <div class="movie-card">
-                        <a href="watch.html?id=15">
-                            <div class="movie-poster">
-                                <img src="https://via.placeholder.com/300x450/CCCCCC/333333?text=مسلسل+3" alt="مسلسل 3">
-                                <div class="movie-overlay">
-                                    <i class="fas fa-play"></i>
-                                </div>
-                                <span class="movie-quality">HD</span>
-                                <span class="movie-episodes">32 حلقة</span>
-                            </div>
-                            <div class="movie-info">
-                                <h3 class="movie-title">المسلسل الثالث</h3>
-                                <div class="movie-meta">
-                                    <span class="movie-type">مسلسل</span>
-                                    <span>2024</span>
-                                    <span><i class="fas fa-star"></i> 9.0</span>
-                                </div>
-                            </div>
-                        </a>
-                    </div>
-                    
-                    <div class="movie-card">
-                        <a href="watch.html?id=16">
-                            <div class="movie-poster">
-                                <img src="https://via.placeholder.com/300x450/CCCCCC/333333?text=مسلسل+4" alt="مسلسل 4">
-                                <div class="movie-overlay">
-                                    <i class="fas fa-play"></i>
-                                </div>
-                                <span class="movie-quality">4K</span>
-                                <span class="movie-episodes">20 حلقة</span>
-                            </div>
-                            <div class="movie-info">
-                                <h3 class="movie-title">المسلسل الرابع</h3>
-                                <div class="movie-meta">
-                                    <span class="movie-type">مسلسل</span>
-                                    <span>2024</span>
-                                    <span><i class="fas fa-star"></i> 8.5</span>
-                                </div>
-                            </div>
-                        </a>
-                    </div>
-                    
-                    <div class="movie-card">
-                        <a href="watch.html?id=17">
-                            <div class="movie-poster">
-                                <img src="https://via.placeholder.com/300x450/CCCCCC/333333?text=مسلسل+5" alt="مسلسل 5">
-                                <div class="movie-overlay">
-                                    <i class="fas fa-play"></i>
-                                </div>
-                                <span class="movie-quality">HD</span>
-                                <span class="movie-episodes">24 حلقة</span>
-                            </div>
-                            <div class="movie-info">
-                                <h3 class="movie-title">المسلسل الخامس</h3>
-                                <div class="movie-meta">
-                                    <span class="movie-type">مسلسل</span>
-                                    <span>2024</span>
-                                    <span><i class="fas fa-star"></i> 8.9</span>
-                                </div>
-                            </div>
-                        </a>
-                    </div>
-                    
-                    <div class="movie-card">
-                        <a href="watch.html?id=18">
-                            <div class="movie-poster">
-                                <img src="https://via.placeholder.com/300x450/CCCCCC/333333?text=مسلسل+6" alt="مسلسل 6">
-                                <div class="movie-overlay">
-                                    <i class="fas fa-play"></i>
-                                </div>
-                                <span class="movie-quality">FHD</span>
-                                <span class="movie-episodes">30 حلقة</span>
-                            </div>
-                            <div class="movie-info">
-                                <h3 class="movie-title">المسلسل السادس</h3>
-                                <div class="movie-meta">
-                                    <span class="movie-type">مسلسل</span>
-                                    <span>2024</span>
-                                    <span><i class="fas fa-star"></i> 9.1</span>
-                                </div>
-                            </div>
-                        </a>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Categories -->
-            <section class="section">
-                <div class="section-header">
-                    <h2 class="section-title"><i class="fas fa-th-large"></i> الأقسام</h2>
-                </div>
-                <div class="categories-grid">
-                    <a href="category.html?cat=arabic" class="category-card">
-                        <div class="category-icon">
-                            <i class="fas fa-flag"></i>
-                        </div>
-                        <h3>عربي</h3>
-                        <p>أفلام ومسلسلات عربية</p>
-                    </a>
-                    
-                    <a href="category.html?cat=turkish" class="category-card">
-                        <div class="category-icon">
-                            <i class="fas fa-mosque"></i>
-                        </div>
-                        <h3>تركي</h3>
-                        <p>أفضل المسلسلات التركية</p>
-                    </a>
-                    
-                    <a href="category.html?cat=asian" class="category-card">
-                        <div class="category-icon">
-                            <i class="fas fa-globe-asia"></i>
-                        </div>
-                        <h3>اسيوي</h3>
-                        <p>دراما وكورية ويابانية</p>
-                    </a>
-                    
-                    <a href="category.html?cat=foreign" class="category-card">
-                        <div class="category-icon">
-                            <i class="fas fa-globe-americas"></i>
-                        </div>
-                        <h3>أجنبي</h3>
-                        <p>هوليود وأوروبية</p>
-                    </a>
-                    
-                    <a href="category.html?cat=indian" class="category-card">
-                        <div class="category-icon">
-                            <i class="fas fa-pepper-hot"></i>
-                        </div>
-                        <h3>هندي</h3>
-                        <p>أفلام ومسلسلات هندية</p>
-                    </a>
-                    
-                    <a href="category.html?cat=documentary" class="category-card">
-                        <div class="category-icon">
-                            <i class="fas fa-camera"></i>
-                        </div>
-                        <h3>وثائقيات</h3>
-                        <p>برامج وثائقية</p>
-                    </a>
-                </div>
-            </section>
+            </div>
         </div>
     </main>
 
@@ -539,71 +96,213 @@
         <div class="container">
             <div class="footer-content">
                 <div class="footer-section">
-                    <h3>أكوام</h3>
-                    <p>منصة مشاهدة الأفلام والمسلسلات العربية والتركية والأجنبية مجاناً وبجودة عالية.</p>
+                    <h3>أكوام الحقيقي</h3>
+                    <p>هذا الموقع يعرض محتوى حقيقي من موقع أكوام الأصلي باستخدام تقنية الـ scraping.</p>
                     <div class="social-links">
-                        <a href="#"><i class="fab fa-facebook"></i></a>
-                        <a href="#"><i class="fab fa-twitter"></i></a>
-                        <a href="#"><i class="fab fa-telegram"></i></a>
-                        <a href="#"><i class="fab fa-youtube"></i></a>
+                        <a href="https://ak.sv" target="_blank" title="الموقع الأصلي">
+                            <i class="fas fa-external-link-alt"></i>
+                        </a>
                     </div>
                 </div>
                 
                 <div class="footer-section">
-                    <h3>روابط سريعة</h3>
-                    <ul>
-                        <li><a href="index.html">الرئيسية</a></li>
-                        <li><a href="movies.html">الأفلام</a></li>
-                        <li><a href="series.html">المسلسلات</a></li>
-                        <li><a href="shows.html">العروض</a></li>
-                        <li><a href="about.html">عن الموقع</a></li>
-                    </ul>
-                </div>
-                
-                <div class="footer-section">
-                    <h3>الأقسام</h3>
-                    <ul>
-                        <li><a href="category.html?cat=arabic">عربي</a></li>
-                        <li><a href="category.html?cat=turkish">تركي</a></li>
-                        <li><a href="category.html?cat=asian">اسيوي</a></li>
-                        <li><a href="category.html?cat=foreign">أجنبي</a></li>
-                        <li><a href="category.html?cat=indian">هندي</a></li>
-                    </ul>
-                </div>
-                
-                <div class="footer-section">
-                    <h3>الدعم</h3>
-                    <ul>
-                        <li><a href="contact.html">اتصل بنا</a></li>
-                        <li><a href="privacy.html">سياسة الخصوصية</a></li>
-                        <li><a href="terms.html">شروط الاستخدام</a></li>
-                        <li><a href="dmca.html">DMCA</a></li>
-                    </ul>
+                    <h3>معلومات</h3>
+                    <p>⚠️ تنبيه: هذا الموقع لأغراض تعليمية فقط</p>
+                    <p>يتم سحب البيانات تلقائياً من المصدر</p>
                 </div>
             </div>
             
             <div class="footer-bottom">
-                <p>© 2024 أكوام. جميع الحقوق محفوظة. هذا الموقع لأغراض تعليمية فقط.</p>
-                <p>المحتوى من مصادر عامة على الإنترنت</p>
+                <p>© 2024 أكوام - محتوى حقيقي. البيانات من <a href="https://ak.sv" target="_blank">ak.sv</a></p>
+                <p>آخر تحديث: <span id="lastUpdate">--</span></p>
             </div>
         </div>
     </footer>
 
     <!-- JavaScript -->
     <script src="js/main.js"></script>
+    <script src="js/scraper.js"></script>
     <script>
-        // Simple search function
-        function search() {
-            const query = document.getElementById('searchInput').value;
-            if (query.trim() !== '') {
+        // Global variables
+        let akwamData = null;
+        const lastUpdateElement = document.getElementById('lastUpdate');
+
+        // Load real content on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            updateLastUpdateTime();
+            loadRealContent();
+            
+            // Auto-refresh every 30 minutes
+            setInterval(loadRealContent, 30 * 60 * 1000);
+        });
+
+        async function loadRealContent() {
+            showLoading(true);
+            hideError();
+            
+            try {
+                // Fetch real data from Akwam
+                akwamData = await akwamScraper.fetchHomePage();
+                
+                if (akwamData && akwamData.sections && akwamData.sections.length > 0) {
+                    renderContent(akwamData);
+                    updateLastUpdateTime();
+                } else {
+                    throw new Error('No data received');
+                }
+                
+            } catch (error) {
+                console.error('Failed to load content:', error);
+                showError('فشل في تحميل المحتوى من أكوام. تأكد من اتصالك بالإنترنت.');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function renderContent(data) {
+            const container = document.getElementById('contentSections');
+            let html = '';
+            
+            data.sections.forEach(section => {
+                if (section.items && section.items.length > 0) {
+                    html += `
+                        <section class="section">
+                            <div class="section-header">
+                                <h2 class="section-title">
+                                    <i class="fas fa-${getSectionIcon(section.type)}"></i> ${section.title}
+                                </h2>
+                                <a href="#" onclick="viewAll('${section.type}')" class="view-all">
+                                    عرض الكل <i class="fas fa-arrow-left"></i>
+                                </a>
+                            </div>
+                            <div class="movies-grid">
+                                ${section.items.map(item => `
+                                    <div class="movie-card">
+                                        <a href="watch.html?url=${encodeURIComponent(item.url)}&type=${item.type}" 
+                                           onclick="previewContent(event, '${item.url}', '${item.type}')">
+                                            <div class="movie-poster">
+                                                ${item.poster ? 
+                                                    `<img src="${item.poster}" alt="${item.title}" 
+                                                         onerror="this.src='https://via.placeholder.com/300x450/333/666?text=${encodeURIComponent(item.title)}'">` :
+                                                    `<div class="no-poster">${item.title.substring(0, 20)}</div>`
+                                                }
+                                                <div class="movie-overlay">
+                                                    <i class="fas fa-play"></i>
+                                                </div>
+                                                ${item.quality ? `<span class="movie-quality">${item.quality}</span>` : ''}
+                                                ${item.year ? `<span class="movie-year">${item.year}</span>` : ''}
+                                            </div>
+                                            <div class="movie-info">
+                                                <h3 class="movie-title" title="${item.title}">
+                                                    ${item.title.length > 30 ? item.title.substring(0, 30) + '...' : item.title}
+                                                </h3>
+                                                <div class="movie-meta">
+                                                    <span class="movie-type">${getTypeArabic(item.type)}</span>
+                                                    ${item.year ? `<span>${item.year}</span>` : ''}
+                                                </div>
+                                            </div>
+                                        </a>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </section>
+                    `;
+                }
+            });
+            
+            container.innerHTML = html || '<p class="no-content">لا يوجد محتوى متاح حالياً</p>';
+        }
+
+        function previewContent(event, url, type) {
+            event.preventDefault();
+            
+            // Show loading for preview
+            const card = event.target.closest('.movie-card');
+            if (card) {
+                const overlay = card.querySelector('.movie-overlay');
+                overlay.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                
+                // Fetch details and redirect
+                setTimeout(() => {
+                    window.location.href = `watch.html?url=${encodeURIComponent(url)}&type=${type}`;
+                }, 500);
+            }
+        }
+
+        function searchContent() {
+            const query = document.getElementById('searchInput').value.trim();
+            if (query) {
                 window.location.href = `search.html?q=${encodeURIComponent(query)}`;
             }
         }
-        
+
+        function viewAll(type) {
+            if (type === 'movies') {
+                window.location.href = 'movies.html';
+            } else if (type === 'series') {
+                window.location.href = 'series.html';
+            } else {
+                // Generic view all
+                window.location.href = `search.html?type=${type}`;
+            }
+        }
+
+        function getSectionIcon(type) {
+            switch(type) {
+                case 'movies': return 'film';
+                case 'series': return 'tv';
+                case 'featured': return 'star';
+                default: return 'video';
+            }
+        }
+
+        function getTypeArabic(type) {
+            switch(type) {
+                case 'movie': return 'فيلم';
+                case 'series': return 'مسلسل';
+                case 'featured': return 'مميز';
+                default: return type;
+            }
+        }
+
+        function showLoading(show) {
+            const loader = document.getElementById('loadingIndicator');
+            loader.style.display = show ? 'block' : 'none';
+            
+            if (show) {
+                document.getElementById('contentSections').innerHTML = '';
+            }
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.style.display = 'block';
+            errorDiv.querySelector('p').textContent = message;
+        }
+
+        function hideError() {
+            document.getElementById('errorMessage').style.display = 'none';
+        }
+
+        function useFallbackContent() {
+            // Use fallback data
+            akwamData = akwamScraper.getFallbackData();
+            renderContent(akwamData);
+            hideError();
+            showLoading(false);
+        }
+
+        function updateLastUpdateTime() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('ar-SA');
+            const dateString = now.toLocaleDateString('ar-SA');
+            lastUpdateElement.textContent = `${dateString} ${timeString}`;
+        }
+
         // Enter key search
         document.getElementById('searchInput').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
-                search();
+                searchContent();
             }
         });
     </script>
