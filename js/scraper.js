@@ -1,428 +1,475 @@
-// REAL Akwam Scraper - Fetches actual data from ak.sv
-class AkwamScraper {
-    constructor() {
-        this.baseUrl = 'https://ak.sv';
-        this.cacheDuration = 3600000; // 1 hour cache
-    }
+// js/scraper.js
+const akwamScraper = {
+    mainUrl: "https://akwam.cam",
+    timeout: 30000,
+    
+    // ----------------------------
+    // وظائف المساعدة
+    // ----------------------------
+    getPoster(element) {
+        if (!element) return null;
+        const img = element.querySelector('img');
+        if (!img) return null;
+        
+        return img.getAttribute('data-src') || 
+               img.getAttribute('src') || 
+               img.getAttribute('data-lazy-src');
+    },
 
-    // Fetch home page content
-    async fetchHomePage() {
-        try {
-            const cacheKey = 'akwam_home';
-            const cached = this.getFromCache(cacheKey);
-            if (cached) return cached;
-
-            const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(this.baseUrl)}`);
-            const data = await response.json();
-            const html = data.contents;
-            
-            // Parse HTML
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(html, 'text/html');
-            
-            const sections = [];
-            
-            // Extract latest movies
-            const moviesSection = this.extractSection(doc, 'movies', 'أحدث الأفلام');
-            if (moviesSection.items.length > 0) sections.push(moviesSection);
-            
-            // Extract latest series
-            const seriesSection = this.extractSection(doc, 'series', 'أحدث المسلسلات');
-            if (seriesSection.items.length > 0) sections.push(seriesSection);
-            
-            // Extract featured content
-            const featuredSection = this.extractFeatured(doc);
-            if (featuredSection.items.length > 0) sections.push(featuredSection);
-            
-            const result = { sections };
-            this.saveToCache(cacheKey, result);
-            return result;
-            
-        } catch (error) {
-            console.error('Error fetching home page:', error);
-            return this.getFallbackData();
+    async fetchWithRetry(url, options = {}, retries = 3) {
+        for (let i = 0; i < retries; i++) {
+            try {
+                const response = await fetch(url, {
+                    ...options,
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                        'Accept-Language': 'ar,en-US;q=0.7,en;q=0.3',
+                        'Cache-Control': 'no-cache',
+                        'Pragma': 'no-cache',
+                        ...options.headers
+                    },
+                    signal: AbortSignal.timeout(this.timeout)
+                });
+                
+                if (response.ok) {
+                    const text = await response.text();
+                    return text;
+                }
+            } catch (error) {
+                if (i === retries - 1) throw error;
+                await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+            }
         }
-    }
+        throw new Error('فشل في جلب البيانات');
+    },
 
-    // Search for content
-    async search(query, page = 1) {
+    async getDocument(url) {
         try {
-            const cacheKey = `akwam_search_${query}_${page}`;
-            const cached = this.getFromCache(cacheKey);
-            if (cached) return cached;
-
-            const url = `${this.baseUrl}/search?q=${encodeURIComponent(query)}&page=${page}`;
-            const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
-            const data = await response.json();
-            const html = data.contents;
-            
+            const html = await this.fetchWithRetry(url);
             const parser = new DOMParser();
-            const doc = parser.parseFromString(html, 'text/html');
-            
-            const items = this.extractSearchResults(doc);
-            const pagination = this.extractPagination(doc);
-            
-            const result = {
-                query,
-                items,
-                pagination,
-                currentPage: page
-            };
-            
-            this.saveToCache(cacheKey, result);
-            return result;
-            
+            return parser.parseFromString(html, 'text/html');
         } catch (error) {
-            console.error('Error searching:', error);
-            return { query, items: [], pagination: {} };
-        }
-    }
-
-    // Get movie/series details
-    async getContentDetails(url) {
-        try {
-            const cacheKey = `akwam_details_${btoa(url)}`;
-            const cached = this.getFromCache(cacheKey);
-            if (cached) return cached;
-
-            const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
-            const data = await response.json();
-            const html = data.contents;
-            
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(html, 'text/html');
-            
-            const details = this.extractContentDetails(doc, url);
-            
-            this.saveToCache(cacheKey, details);
-            return details;
-            
-        } catch (error) {
-            console.error('Error fetching details:', error);
+            console.error('خطأ في تحليل الصفحة:', error);
             return null;
         }
-    }
+    },
 
-    // Get video sources
-    async getVideoSources(episodeUrl) {
-        try {
-            const cacheKey = `akwam_video_${btoa(episodeUrl)}`;
-            const cached = this.getFromCache(cacheKey);
-            if (cached) return cached;
+    // ----------------------------
+    // وظائف السحب الرئيسية
+    // ----------------------------
+    parseMediaItems(doc) {
+        const items = [];
+        
+        // محاولة عدة أنماط للعناصر (حسب تغييرات الموقع)
+        const selectors = [
+            'div.col-lg-auto.col-md-4.col-6',  // النمط القديم
+            'div.col-lg-3.col-md-4.col-6',     // نمط جديد
+            'div.movie-item',                   // نمط البطاقات
+            'div.item',                         // نمط عام
+            'article.post'                      // نمط المقالات
+        ];
 
-            const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(episodeUrl)}`);
-            const data = await response.json();
-            const html = data.contents;
-            
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(html, 'text/html');
-            
-            const sources = this.extractVideoSources(doc);
-            
-            this.saveToCache(cacheKey, sources, 1800000); // 30 minutes cache for videos
-            return sources;
-            
-        } catch (error) {
-            console.error('Error fetching video sources:', error);
-            return [];
+        let elements = [];
+        for (const selector of selectors) {
+            elements = doc.querySelectorAll(selector);
+            if (elements.length > 0) break;
         }
-    }
 
-    // Helper methods
-    extractSection(doc, type, title) {
-        const items = [];
-        const selectors = {
-            'movies': 'a[href*="/movie/"], a[href*="/movies/"]',
-            'series': 'a[href*="/series/"], a[href*="/tv/"]',
-            'featured': '.featured-item, .highlight-item'
-        };
-
-        const selector = selectors[type] || 'div.col-lg-auto.col-md-4.col-6';
-        const elements = doc.querySelectorAll(selector);
-        
-        elements.forEach((el, index) => {
-            if (index >= 12) return; // Limit to 12 items
-            
-            const link = el.querySelector('a[href]');
-            const img = el.querySelector('img');
-            const titleEl = el.querySelector('h3, h4, .title');
-            
-            if (link && (img || titleEl)) {
-                const item = {
-                    id: this.extractIdFromUrl(link.href),
-                    title: titleEl ? titleEl.textContent.trim() : 'بدون عنوان',
-                    url: link.href.startsWith('http') ? link.href : `${this.baseUrl}${link.href}`,
-                    poster: img ? (img.dataset.src || img.src) : null,
-                    type: type,
-                    year: this.extractYear(el),
-                    quality: this.extractQuality(el)
-                };
+        elements.forEach(el => {
+            try {
+                // العثور على الرابط
+                const link = el.querySelector('a');
+                if (!link) return;
                 
-                // Clean up URL
-                if (item.url.includes(this.baseUrl)) {
-                    items.push(item);
+                const href = link.getAttribute('href');
+                if (!href) return;
+                
+                // العثور على العنوان
+                let title = '';
+                const titleSelectors = [
+                    'h3.entry-title',
+                    'h2.title',
+                    '.movie-title',
+                    '.title',
+                    'h3',
+                    'h2'
+                ];
+                
+                for (const selector of titleSelectors) {
+                    const titleEl = el.querySelector(selector);
+                    if (titleEl) {
+                        title = titleEl.textContent.trim();
+                        break;
+                    }
                 }
-            }
-        });
-
-        return {
-            title,
-            type,
-            items: items.slice(0, 12) // Ensure max 12 items
-        };
-    }
-
-    extractFeatured(doc) {
-        const items = [];
-        const featuredElements = doc.querySelectorAll('.featured-item, .slider-item, .hero-item');
-        
-        featuredElements.forEach((el, index) => {
-            if (index >= 6) return;
-            
-            const link = el.querySelector('a[href]');
-            const img = el.querySelector('img');
-            const titleEl = el.querySelector('h1, h2, h3, .title');
-            
-            if (link && titleEl) {
-                items.push({
-                    id: this.extractIdFromUrl(link.href),
-                    title: titleEl.textContent.trim(),
-                    url: link.href.startsWith('http') ? link.href : `${this.baseUrl}${link.href}`,
-                    poster: img ? (img.dataset.src || img.src) : null,
-                    type: 'featured',
-                    description: this.extractDescription(el)
-                });
-            }
-        });
-
-        return {
-            title: 'مميز اليوم',
-            type: 'featured',
-            items: items.slice(0, 6)
-        };
-    }
-
-    extractSearchResults(doc) {
-        const items = [];
-        const resultElements = doc.querySelectorAll('.search-result, .item, .col-lg-auto, .col-md-4');
-        
-        resultElements.forEach(el => {
-            const link = el.querySelector('a[href*="/movie/"], a[href*="/series/"], a[href*="/tv/"]');
-            if (!link) return;
-            
-            const img = el.querySelector('img');
-            const titleEl = el.querySelector('h3, h4, .title, .entry-title');
-            
-            if (titleEl) {
-                const url = link.href.startsWith('http') ? link.href : `${this.baseUrl}${link.href}`;
+                
+                if (!title) return;
+                
+                // العثور على البوستر
+                const poster = this.getPoster(el);
+                
+                // العثور على الجودة
+                let quality = '';
+                const qualitySelectors = [
+                    '.movie-quality',
+                    '.quality',
+                    '.label',
+                    'span.badge'
+                ];
+                
+                for (const selector of qualitySelectors) {
+                    const qualityEl = el.querySelector(selector);
+                    if (qualityEl) {
+                        quality = qualityEl.textContent.trim();
+                        break;
+                    }
+                }
+                
+                // العثور على السنة
+                let year = '';
+                const yearSelectors = [
+                    '.movie-year',
+                    '.year',
+                    'span:contains("20")'
+                ];
+                
+                for (const selector of yearSelectors) {
+                    const yearEl = el.querySelector(selector);
+                    if (yearEl) {
+                        const yearText = yearEl.textContent.trim();
+                        const yearMatch = yearText.match(/\b(19|20)\d{2}\b/);
+                        if (yearMatch) {
+                            year = yearMatch[0];
+                            break;
+                        }
+                    }
+                }
+                
+                // تحديد النوع بناءً على الرابط
+                let type = 'movie';
+                const urlLower = href.toLowerCase();
+                if (urlLower.includes('/series/') || urlLower.includes('/season/')) {
+                    type = 'series';
+                } else if (urlLower.includes('/anime/')) {
+                    type = 'anime';
+                } else if (urlLower.includes('/show/')) {
+                    type = 'show';
+                }
                 
                 items.push({
-                    id: this.extractIdFromUrl(url),
-                    title: titleEl.textContent.trim(),
-                    url: url,
-                    poster: img ? (img.dataset.src || img.src) : null,
-                    type: url.includes('/movie/') ? 'movie' : 'series',
-                    year: this.extractYear(el),
-                    quality: this.extractQuality(el)
+                    title,
+                    url: href.startsWith('http') ? href : `${this.mainUrl}${href}`,
+                    poster: poster ? (poster.startsWith('http') ? poster : `${this.mainUrl}${poster}`) : null,
+                    quality,
+                    year,
+                    type
                 });
+            } catch (error) {
+                console.error('خطأ في تحليل العنصر:', error);
             }
         });
 
         return items;
-    }
+    },
 
-    extractContentDetails(doc, url) {
-        const titleEl = doc.querySelector('h1.entry-title, h1.title, h1');
-        const descriptionEl = doc.querySelector('.description, .synopsis, .plot, p');
-        const posterEl = doc.querySelector('.poster img, .thumbnail img, img[src*="poster"]');
-        const yearEl = doc.querySelector('.year, .release-date, time');
-        const qualityEl = doc.querySelector('.quality, .resolution, .hd-badge');
-        
-        const episodes = [];
-        const episodeElements = doc.querySelectorAll('.episode-item, .episode, [data-episode]');
-        
-        episodeElements.forEach((ep, index) => {
-            const epLink = ep.querySelector('a[href*="/episode/"], a[href*="/watch/"]');
-            if (epLink) {
-                episodes.push({
-                    id: this.extractIdFromUrl(epLink.href),
-                    title: ep.querySelector('.episode-title, .title')?.textContent.trim() || `الحلقة ${index + 1}`,
-                    url: epLink.href.startsWith('http') ? epLink.href : `${this.baseUrl}${epLink.href}`,
-                    episodeNumber: index + 1,
-                    thumbnail: ep.querySelector('img')?.src
-                });
-            }
-        });
-
-        return {
-            id: this.extractIdFromUrl(url),
-            title: titleEl ? titleEl.textContent.trim() : 'بدون عنوان',
-            description: descriptionEl ? descriptionEl.textContent.trim() : '',
-            poster: posterEl ? (posterEl.dataset.src || posterEl.src) : null,
-            year: yearEl ? this.extractYearFromText(yearEl.textContent) : null,
-            quality: qualityEl ? qualityEl.textContent.trim() : 'HD',
-            type: url.includes('/movie/') ? 'movie' : 'series',
-            episodes: episodes,
-            url: url
-        };
-    }
-
-    extractVideoSources(doc) {
-        const sources = [];
-        
-        // Look for direct video sources
-        const videoElements = doc.querySelectorAll('source[src*=".mp4"], source[src*=".m3u8"], video source');
-        videoElements.forEach(source => {
-            const src = source.src;
-            if (src && (src.includes('.mp4') || src.includes('.m3u8'))) {
-                sources.push({
-                    url: src.startsWith('http') ? src : `${this.baseUrl}${src}`,
-                    quality: source.getAttribute('label') || source.getAttribute('size') || 'HD',
-                    type: 'video/mp4'
-                });
-            }
-        });
-
-        // Look for iframe embeds
-        const iframes = doc.querySelectorAll('iframe[src*="youtube"], iframe[src*="vimeo"], iframe[src*="dailymotion"]');
-        iframes.forEach(iframe => {
-            sources.push({
-                url: iframe.src,
-                quality: 'HD',
-                type: 'embed'
-            });
-        });
-
-        // Look for video links in scripts
-        const scripts = doc.querySelectorAll('script');
-        scripts.forEach(script => {
-            const text = script.textContent;
-            const videoUrls = text.match(/(https?:\/\/[^\s"']*\.(?:mp4|m3u8|webm|mkv)[^\s"']*)/gi);
-            if (videoUrls) {
-                videoUrls.forEach(url => {
-                    sources.push({
-                        url: url,
-                        quality: 'HD',
-                        type: 'video/mp4'
-                    });
-                });
-            }
-        });
-
-        return sources.slice(0, 5); // Limit to 5 sources
-    }
-
-    extractPagination(doc) {
-        const pagination = {
-            current: 1,
-            total: 1,
-            hasNext: false,
-            hasPrev: false
-        };
-
-        const paginationEl = doc.querySelector('.pagination, .page-numbers, .pages');
-        if (paginationEl) {
-            const current = paginationEl.querySelector('.current, .active');
-            if (current) {
-                pagination.current = parseInt(current.textContent) || 1;
-            }
-
-            const pages = paginationEl.querySelectorAll('a, .page-number');
-            let maxPage = pagination.current;
-            pages.forEach(page => {
-                const pageNum = parseInt(page.textContent);
-                if (pageNum > maxPage) maxPage = pageNum;
-            });
-            pagination.total = maxPage;
-
-            pagination.hasNext = !!paginationEl.querySelector('.next, .fa-chevron-right');
-            pagination.hasPrev = !!paginationEl.querySelector('.prev, .fa-chevron-left');
-        }
-
-        return pagination;
-    }
-
-    // Utility methods
-    extractIdFromUrl(url) {
-        const match = url.match(/\/(movie|series|tv|episode)\/([^\/]+)/);
-        return match ? match[2] : btoa(url).substring(0, 10);
-    }
-
-    extractYear(element) {
-        const text = element.textContent;
-        const yearMatch = text.match(/(19|20)\d{2}/);
-        return yearMatch ? parseInt(yearMatch[0]) : new Date().getFullYear();
-    }
-
-    extractYearFromText(text) {
-        const yearMatch = text.match(/(19|20)\d{2}/);
-        return yearMatch ? parseInt(yearMatch[0]) : null;
-    }
-
-    extractQuality(element) {
-        const text = element.textContent + ' ' + (element.className || '');
-        if (text.includes('4K') || text.includes('2160p')) return '4K';
-        if (text.includes('1080p') || text.includes('FHD')) return 'FHD';
-        if (text.includes('720p') || text.includes('HD')) return 'HD';
-        return 'SD';
-    }
-
-    extractDescription(element) {
-        const descEl = element.querySelector('.description, .synopsis, p');
-        return descEl ? descEl.textContent.trim().substring(0, 100) + '...' : '';
-    }
-
-    // Cache management
-    getFromCache(key) {
+    // ----------------------------
+    // واجهات API الرئيسية
+    // ----------------------------
+    async fetchHomePage() {
         try {
-            const item = localStorage.getItem(key);
-            if (!item) return null;
+            const sections = [];
             
-            const { data, timestamp } = JSON.parse(item);
-            if (Date.now() - timestamp > this.cacheDuration) {
-                localStorage.removeItem(key);
-                return null;
+            // قائمة الأقسام الرئيسية
+            const mainSections = [
+                { url: `${this.mainUrl}/movies`, title: '🎬 أحدث الأفلام', type: 'movies' },
+                { url: `${this.mainUrl}/series`, title: '📺 أحدث المسلسلات', type: 'series' },
+                { url: `${this.mainUrl}/anime`, title: '👻 أحدث الأنمي', type: 'anime' },
+                { url: `${this.mainUrl}/shows`, title: '📡 العروض والبرامج', type: 'shows' }
+            ];
+            
+            for (const section of mainSections) {
+                try {
+                    const doc = await this.getDocument(section.url);
+                    if (!doc) continue;
+                    
+                    const items = this.parseMediaItems(doc);
+                    if (items.length > 0) {
+                        sections.push({
+                            title: section.title,
+                            type: section.type,
+                            items: items.slice(0, 12) // عرض 12 عنصر كحد أقصى
+                        });
+                    }
+                } catch (error) {
+                    console.error(`خطأ في قسم ${section.title}:`, error);
+                }
             }
             
-            return data;
+            // إذا فشلت جميع الأقسام، استخدم بيانات تجريبية
+            if (sections.length === 0) {
+                return this.getFallbackData();
+            }
+            
+            return { sections, success: true, timestamp: new Date().toISOString() };
         } catch (error) {
+            console.error('خطأ في جلب الصفحة الرئيسية:', error);
+            return this.getFallbackData();
+        }
+    },
+
+    async search(query, page = 1) {
+        try {
+            const encodedQuery = encodeURIComponent(query);
+            const searchUrl = `${this.mainUrl}/search?q=${encodedQuery}&page=${page}`;
+            
+            const doc = await this.getDocument(searchUrl);
+            if (!doc) {
+                return { items: [], pagination: { current: page, total: 1 } };
+            }
+            
+            const items = this.parseMediaItems(doc);
+            
+            // محاولة استخراج معلومات الترقيم
+            let totalPages = 1;
+            const paginationEls = doc.querySelectorAll('.pagination a, .page-numbers a');
+            const pageNumbers = [];
+            
+            paginationEls.forEach(el => {
+                const text = el.textContent.trim();
+                const num = parseInt(text);
+                if (!isNaN(num)) {
+                    pageNumbers.push(num);
+                }
+            });
+            
+            if (pageNumbers.length > 0) {
+                totalPages = Math.max(...pageNumbers);
+            }
+            
+            return {
+                items,
+                pagination: {
+                    current: page,
+                    total: totalPages,
+                    hasNext: page < totalPages,
+                    hasPrev: page > 1
+                }
+            };
+        } catch (error) {
+            console.error('خطأ في البحث:', error);
+            return { items: [], pagination: { current: page, total: 1 } };
+        }
+    },
+
+    async getMediaDetails(url) {
+        try {
+            const doc = await this.getDocument(url);
+            if (!doc) return null;
+            
+            // استخراج العنوان
+            const titleSelectors = [
+                'h1.entry-title',
+                'h1.title',
+                '.movie-title h1',
+                'h1'
+            ];
+            
+            let title = '';
+            for (const selector of titleSelectors) {
+                const titleEl = doc.querySelector(selector);
+                if (titleEl) {
+                    title = titleEl.textContent.trim();
+                    break;
+                }
+            }
+            
+            // استخراج الوصف
+            let plot = '';
+            const plotSelectors = [
+                'h2:contains("قصة") + div > p',
+                '.description',
+                '.plot',
+                'meta[name="description"]',
+                'meta[property="og:description"]'
+            ];
+            
+            for (const selector of plotSelectors) {
+                const plotEl = doc.querySelector(selector);
+                if (plotEl) {
+                    plot = plotEl.getAttribute('content') || plotEl.textContent;
+                    plot = plot.trim();
+                    if (plot) break;
+                }
+            }
+            
+            // استخراج البوستر
+            let poster = '';
+            const posterSelectors = [
+                'meta[property="og:image"]',
+                'meta[name="twitter:image"]',
+                '.movie-poster img',
+                '.poster img',
+                'img[src*="poster"]',
+                'img[src*="cover"]'
+            ];
+            
+            for (const selector of posterSelectors) {
+                const posterEl = doc.querySelector(selector);
+                if (posterEl) {
+                    poster = posterEl.getAttribute('content') || posterEl.getAttribute('src');
+                    if (poster) break;
+                }
+            }
+            
+            // استخراج التصنيفات
+            const tags = [];
+            const tagSelectors = [
+                '.tags a',
+                '.categories a',
+                '.genre a',
+                'a[href*="/category/"]',
+                'a[href*="/genre/"]'
+            ];
+            
+            tagSelectors.forEach(selector => {
+                doc.querySelectorAll(selector).forEach(el => {
+                    const tag = el.textContent.trim();
+                    if (tag && !tags.includes(tag)) {
+                        tags.push(tag);
+                    }
+                });
+            });
+            
+            // استخراج السنة
+            let year = '';
+            const yearMatch = url.match(/\/(19|20)\d{2}\//);
+            if (yearMatch) {
+                year = yearMatch[0].replace(/\//g, '');
+            }
+            
+            // استخراج الحلقات (للمسلسلات)
+            const episodes = [];
+            const episodeSelectors = [
+                '#series-episodes .episode',
+                '.episodes-list .episode',
+                '.season-episodes .episode'
+            ];
+            
+            episodeSelectors.forEach(selector => {
+                doc.querySelectorAll(selector).forEach((ep, index) => {
+                    const epLink = ep.querySelector('a');
+                    if (epLink) {
+                        episodes.push({
+                            title: epLink.textContent.trim() || `الحلقة ${index + 1}`,
+                            url: epLink.getAttribute('href'),
+                            number: index + 1
+                        });
+                    }
+                });
+            });
+            
+            return {
+                title,
+                plot,
+                poster: poster ? (poster.startsWith('http') ? poster : `${this.mainUrl}${poster}`) : null,
+                tags,
+                year,
+                episodes,
+                url
+            };
+        } catch (error) {
+            console.error('خطأ في جلب تفاصيل الوسائط:', error);
             return null;
         }
-    }
+    },
 
-    saveToCache(key, data, duration = this.cacheDuration) {
+    async getVideoSources(episodeUrl) {
         try {
-            const item = {
-                data,
-                timestamp: Date.now()
-            };
-            localStorage.setItem(key, JSON.stringify(item));
+            const doc = await this.getDocument(episodeUrl);
+            if (!doc) return [];
             
-            // Schedule cleanup
-            setTimeout(() => {
-                localStorage.removeItem(key);
-            }, duration);
+            const sources = [];
+            
+            // البحث عن روابط الفيديو المباشرة
+            const videoSelectors = [
+                'source[src]',
+                'video source[src]',
+                'iframe[src*="embed"]',
+                'iframe[src*="video"]',
+                'div[data-video-src]',
+                'a[href*=".mp4"]',
+                'a[href*=".m3u8"]'
+            ];
+            
+            videoSelectors.forEach(selector => {
+                doc.querySelectorAll(selector).forEach(el => {
+                    const src = el.getAttribute('src') || 
+                               el.getAttribute('data-video-src') || 
+                               el.getAttribute('href');
+                    
+                    if (src && (src.includes('.mp4') || src.includes('.m3u8') || src.includes('embed'))) {
+                        let quality = 'متوسط';
+                        const qualityAttr = el.getAttribute('size') || 
+                                           el.getAttribute('label') || 
+                                           el.getAttribute('data-quality');
+                        
+                        if (qualityAttr) {
+                            quality = qualityAttr;
+                        } else if (src.includes('1080')) {
+                            quality = 'عالية';
+                        } else if (src.includes('720')) {
+                            quality = 'متوسط';
+                        } else if (src.includes('480')) {
+                            quality = 'منخفضة';
+                        }
+                        
+                        sources.push({
+                            url: src.startsWith('http') ? src : `${this.mainUrl}${src}`,
+                            quality,
+                            type: src.includes('.m3u8') ? 'hls' : 'direct'
+                        });
+                    }
+                });
+            });
+            
+            return sources;
         } catch (error) {
-            console.error('Error saving to cache:', error);
+            console.error('خطأ في جلب مصادر الفيديو:', error);
+            return [];
         }
-    }
+    },
 
+    // بيانات تجريبية للاستخدام عند فشل الاتصال
     getFallbackData() {
-        // Return some fallback data if scraping fails
         return {
             sections: [
                 {
-                    title: 'الأفلام',
+                    title: '🎬 أفلام تجريبية',
                     type: 'movies',
                     items: [
-                        { id: '1', title: 'فيلم تجريبي 1', type: 'movie', url: '#' },
-                        { id: '2', title: 'فيلم تجريبي 2', type: 'movie', url: '#' }
+                        {
+                            title: 'فيلم تجريبي 1',
+                            url: '#',
+                            poster: 'https://via.placeholder.com/300x450/333/666?text=فيلم+تجريبي',
+                            quality: 'HD',
+                            year: '2024',
+                            type: 'movie'
+                        },
+                        {
+                            title: 'فيلم تجريبي 2',
+                            url: '#',
+                            poster: 'https://via.placeholder.com/300x450/333/666?text=فيلم+تجريبي',
+                            quality: 'FHD',
+                            year: '2023',
+                            type: 'movie'
+                        }
                     ]
                 }
-            ]
+            ],
+            success: false,
+            timestamp: new Date().toISOString(),
+            isFallback: true
         };
     }
-}
-
-// Create global instance
-window.akwamScraper = new AkwamScraper();
+};
