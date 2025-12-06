@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نتائج البحث - أكوام</title>
+    <title>بحث - أكوام حقيقي</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/responsive.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -32,7 +32,7 @@
                 <div class="nav-search">
                     <div class="search-box">
                         <input type="text" id="searchInput" placeholder="ابحث عن فيلم أو مسلسل...">
-                        <button onclick="search()"><i class="fas fa-search"></i></button>
+                        <button onclick="performSearch()"><i class="fas fa-search"></i></button>
                     </div>
                 </div>
                 
@@ -45,29 +45,53 @@
 
     <main class="main-content">
         <div class="container">
-            <!-- Search Results Header -->
+            <!-- Search Header -->
             <div class="page-header">
-                <h1><i class="fas fa-search"></i> نتائج البحث</h1>
-                <p id="searchQuery">جاري البحث...</p>
+                <h1><i class="fas fa-search"></i> بحث في أكوام</h1>
+                <p id="searchStatus">اكتب كلمة للبحث عن أفلام ومسلسلات حقيقية</p>
+            </div>
+
+            <!-- Search Form -->
+            <div class="search-form">
+                <div class="search-box-large">
+                    <input type="text" id="mainSearchInput" placeholder="مثال: أفلام أكشن 2024, مسلسلات تركية...">
+                    <button onclick="performMainSearch()" class="btn btn-primary">
+                        <i class="fas fa-search"></i> بحث في أكوام
+                    </button>
+                </div>
+                
+                <div class="search-suggestions">
+                    <span>اقتراحات:</span>
+                    <button onclick="searchSuggestion('أفلام جديدة')">أفلام جديدة</button>
+                    <button onclick="searchSuggestion('مسلسلات تركية')">مسلسلات تركية</button>
+                    <button onclick="searchSuggestion('أنمي')">أنمي</button>
+                    <button onclick="searchSuggestion('أفلام رعب')">أفلام رعب</button>
+                </div>
             </div>
 
             <!-- Search Results -->
             <div class="section">
                 <div class="section-header">
-                    <h2 class="section-title">النتائج (<span id="resultsCount">0</span>)</h2>
+                    <h2 class="section-title" id="resultsTitle">نتائج البحث</h2>
+                    <div class="search-stats" id="searchStats"></div>
+                </div>
+                
+                <div class="loading-spinner" id="searchLoading" style="display: none;">
+                    <div class="spinner"></div>
+                    <p>جاري البحث في أكوام...</p>
                 </div>
                 
                 <div class="movies-grid" id="searchResults">
-                    <!-- Results will be loaded here by JavaScript -->
-                    <div class="no-results" style="grid-column: 1 / -1; text-align: center; padding: 50px;">
+                    <!-- Results will be loaded here -->
+                    <div class="no-results" id="noResults">
                         <i class="fas fa-search" style="font-size: 60px; color: var(--primary-color); margin-bottom: 20px;"></i>
-                        <h3>لم يتم العثور على نتائج</h3>
-                        <p>حاول البحث بكلمات مختلفة أو تصفح الأقسام</p>
-                        <a href="index.html" class="btn btn-primary" style="margin-top: 20px;">
-                            <i class="fas fa-home"></i> العودة للرئيسية
-                        </a>
+                        <h3>ابدأ بالبحث</h3>
+                        <p>اكتب كلمة في شريط البحث للعثور على أفلام ومسلسلات حقيقية من أكوام</p>
                     </div>
                 </div>
+                
+                <!-- Pagination -->
+                <div class="pagination" id="pagination" style="display: none;"></div>
             </div>
         </div>
     </main>
@@ -75,12 +99,293 @@
     <footer class="footer">
         <div class="container">
             <div class="footer-bottom">
-                <p>© 2024 أكوام. جميع الحقوق محفوظة.</p>
+                <p>© 2024 أكوام حقيقي - نتائج بحث من <a href="https://ak.sv" target="_blank">ak.sv</a></p>
             </div>
         </div>
     </footer>
 
     <script src="js/main.js"></script>
-    <script src="js/search.js"></script>
+    <script src="js/scraper.js"></script>
+    <script>
+        // Global variables
+        let currentQuery = '';
+        let currentPage = 1;
+        let totalPages = 1;
+        let searchResults = [];
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get search query from URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const query = urlParams.get('q');
+            const page = parseInt(urlParams.get('page')) || 1;
+            
+            if (query) {
+                currentQuery = decodeURIComponent(query);
+                currentPage = page;
+                document.getElementById('mainSearchInput').value = currentQuery;
+                performSearch(currentQuery, page);
+            }
+            
+            // Setup enter key for search
+            document.getElementById('mainSearchInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    performMainSearch();
+                }
+            });
+            
+            document.getElementById('searchInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    performSearchFromHeader();
+                }
+            });
+        });
+
+        async function performSearch(query = null, page = 1) {
+            const searchQuery = query || document.getElementById('mainSearchInput').value.trim();
+            
+            if (!searchQuery) {
+                showMessage('يرجى إدخال كلمة للبحث');
+                return;
+            }
+            
+            // Update URL
+            const newUrl = new URL(window.location);
+            newUrl.searchParams.set('q', encodeURIComponent(searchQuery));
+            if (page > 1) newUrl.searchParams.set('page', page);
+            window.history.replaceState({}, '', newUrl);
+            
+            // Update UI
+            currentQuery = searchQuery;
+            currentPage = page;
+            document.getElementById('searchStatus').textContent = `جاري البحث عن: "${searchQuery}"`;
+            document.getElementById('resultsTitle').textContent = `نتائج البحث: "${searchQuery}"`;
+            showLoading(true);
+            clearResults();
+            
+            try {
+                // Perform real search using scraper
+                const result = await akwamScraper.search(searchQuery, page);
+                
+                if (result.items && result.items.length > 0) {
+                    searchResults = result.items;
+                    totalPages = result.pagination.total || 1;
+                    
+                    renderResults(result.items);
+                    updateSearchStats(result.items.length, page, totalPages);
+                    
+                    if (totalPages > 1) {
+                        renderPagination();
+                    }
+                } else {
+                    showNoResults(searchQuery);
+                }
+                
+            } catch (error) {
+                console.error('Search error:', error);
+                showError('فشل في البحث. حاول مرة أخرى.');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function performMainSearch() {
+            const query = document.getElementById('mainSearchInput').value.trim();
+            if (query) {
+                performSearch(query, 1);
+            }
+        }
+
+        function performSearchFromHeader() {
+            const query = document.getElementById('searchInput').value.trim();
+            if (query) {
+                window.location.href = `search.html?q=${encodeURIComponent(query)}`;
+            }
+        }
+
+        function searchSuggestion(text) {
+            document.getElementById('mainSearchInput').value = text;
+            performSearch(text, 1);
+        }
+
+        function renderResults(items) {
+            const container = document.getElementById('searchResults');
+            
+            if (items.length === 0) {
+                showNoResults(currentQuery);
+                return;
+            }
+            
+            const html = items.map(item => `
+                <div class="movie-card">
+                    <a href="watch.html?url=${encodeURIComponent(item.url)}&type=${item.type}" 
+                       onclick="previewSearchResult(event, '${item.url}', '${item.type}')">
+                        <div class="movie-poster">
+                            ${item.poster ? 
+                                `<img src="${item.poster}" alt="${item.title}" 
+                                     onerror="this.src='https://via.placeholder.com/300x450/333/666?text=${encodeURIComponent(item.title.substring(0, 20))}'">` :
+                                `<div class="no-poster">${item.title.substring(0, 20)}</div>`
+                            }
+                            <div class="movie-overlay">
+                                <i class="fas fa-play"></i>
+                            </div>
+                            ${item.quality ? `<span class="movie-quality">${item.quality}</span>` : ''}
+                            ${item.year ? `<span class="movie-year">${item.year}</span>` : ''}
+                        </div>
+                        <div class="movie-info">
+                            <h3 class="movie-title" title="${item.title}">
+                                ${item.title.length > 30 ? item.title.substring(0, 30) + '...' : item.title}
+                            </h3>
+                            <div class="movie-meta">
+                                <span class="movie-type">${getTypeArabic(item.type)}</span>
+                                ${item.year ? `<span>${item.year}</span>` : ''}
+                            </div>
+                            <div class="movie-tags">
+                                ${item.quality ? `<span class="movie-tag">${item.quality}</span>` : ''}
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            `).join('');
+            
+            container.innerHTML = html;
+            document.getElementById('noResults').style.display = 'none';
+        }
+
+        function previewSearchResult(event, url, type) {
+            event.preventDefault();
+            
+            const card = event.target.closest('.movie-card');
+            if (card) {
+                const overlay = card.querySelector('.movie-overlay');
+                const originalHTML = overlay.innerHTML;
+                overlay.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                
+                setTimeout(() => {
+                    window.location.href = `watch.html?url=${encodeURIComponent(url)}&type=${type}`;
+                }, 500);
+            }
+        }
+
+        function renderPagination() {
+            const container = document.getElementById('pagination');
+            let html = '';
+            
+            // Previous button
+            html += `
+                <button class="pagination-btn ${currentPage === 1 ? 'disabled' : ''}" 
+                        ${currentPage === 1 ? 'disabled' : ''}
+                        onclick="goToPage(${currentPage - 1})">
+                    <i class="fas fa-chevron-right"></i> السابق
+                </button>
+            `;
+            
+            // Page numbers
+            const maxPagesToShow = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
+            let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
+            
+            if (endPage - startPage + 1 < maxPagesToShow) {
+                startPage = Math.max(1, endPage - maxPagesToShow + 1);
+            }
+            
+            for (let i = startPage; i <= endPage; i++) {
+                html += `
+                    <button class="pagination-btn ${i === currentPage ? 'active' : ''}" 
+                            onclick="goToPage(${i})">
+                        ${i}
+                    </button>
+                `;
+            }
+            
+            // Next button
+            html += `
+                <button class="pagination-btn ${currentPage === totalPages ? 'disabled' : ''}" 
+                        ${currentPage === totalPages ? 'disabled' : ''}
+                        onclick="goToPage(${currentPage + 1})">
+                    التالي <i class="fas fa-chevron-left"></i>
+                </button>
+            `;
+            
+            container.innerHTML = html;
+            container.style.display = 'flex';
+        }
+
+        function goToPage(page) {
+            if (page >= 1 && page <= totalPages && page !== currentPage) {
+                performSearch(currentQuery, page);
+            }
+        }
+
+        function updateSearchStats(count, page, total) {
+            const stats = document.getElementById('searchStats');
+            stats.innerHTML = `
+                <span>${count} نتيجة</span>
+                ${total > 1 ? `<span>الصفحة ${page} من ${total}</span>` : ''}
+            `;
+        }
+
+        function showLoading(show) {
+            document.getElementById('searchLoading').style.display = show ? 'block' : 'none';
+        }
+
+        function clearResults() {
+            document.getElementById('searchResults').innerHTML = '';
+            document.getElementById('pagination').style.display = 'none';
+            document.getElementById('searchStats').innerHTML = '';
+        }
+
+        function showNoResults(query) {
+            const container = document.getElementById('searchResults');
+            container.innerHTML = `
+                <div class="no-results" style="grid-column: 1 / -1; text-align: center; padding: 50px;">
+                    <i class="fas fa-search" style="font-size: 60px; color: var(--primary-color); margin-bottom: 20px;"></i>
+                    <h3>لا توجد نتائج لـ "${query}"</h3>
+                    <p>حاول البحث بكلمات مختلفة أو تصفح المحتوى المتاح</p>
+                    <div style="margin-top: 30px; display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+                        <button onclick="searchSuggestion('أفلام 2024')" class="btn btn-primary">
+                            أفلام 2024
+                        </button>
+                        <button onclick="searchSuggestion('مسلسلات')" class="btn btn-secondary">
+                            مسلسلات
+                        </button>
+                        <button onclick="window.location.href='index.html'" class="btn btn-secondary">
+                            <i class="fas fa-home"></i> الرئيسية
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function showMessage(message) {
+            alert(message);
+        }
+
+        function showError(message) {
+            const container = document.getElementById('searchResults');
+            container.innerHTML = `
+                <div class="no-results" style="grid-column: 1 / -1; text-align: center; padding: 50px;">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 60px; color: #e74c3c; margin-bottom: 20px;"></i>
+                    <h3>${message}</h3>
+                    <p>قد يكون هناك مشكلة في الاتصال. حاول:</p>
+                    <div style="margin-top: 30px; display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+                        <button onclick="location.reload()" class="btn btn-primary">
+                            <i class="fas fa-redo"></i> إعادة المحاولة
+                        </button>
+                        <button onclick="window.location.href='index.html'" class="btn btn-secondary">
+                            <i class="fas fa-home"></i> العودة
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function getTypeArabic(type) {
+            switch(type) {
+                case 'movie': return 'فيلم';
+                case 'series': return 'مسلسل';
+                default: return type;
+            }
+        }
+    </script>
 </body>
 </html>
