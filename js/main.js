@@ -1,353 +1,267 @@
-// Main JavaScript for Akwam Website
+// js/main.js
+// وظائف عامة للموقع
 
-// Mobile Menu Toggle
+// تبديل القائمة على الأجهزة المحمولة
 function toggleMenu() {
     const navMenu = document.querySelector('.nav-menu');
     const mobileToggle = document.querySelector('.mobile-toggle');
     
-    navMenu.classList.toggle('active');
-    mobileToggle.classList.toggle('active');
-    
-    // Toggle search box on mobile
-    if (window.innerWidth <= 992) {
-        const searchBox = document.querySelector('.search-box');
-        if (navMenu.classList.contains('active')) {
-            searchBox.classList.remove('active');
-        }
-    }
-}
-
-// Search Box Toggle on Mobile
-function toggleSearch() {
-    if (window.innerWidth <= 992) {
-        const searchBox = document.querySelector('.search-box');
-        const navMenu = document.querySelector('.nav-menu');
+    if (navMenu && mobileToggle) {
+        navMenu.classList.toggle('active');
+        mobileToggle.classList.toggle('active');
         
-        searchBox.classList.toggle('active');
-        if (searchBox.classList.contains('active')) {
-            navMenu.classList.remove('active');
-            document.querySelector('.mobile-toggle').classList.remove('active');
+        // تغيير الأيقونة
+        const icon = mobileToggle.querySelector('i');
+        if (icon) {
+            if (navMenu.classList.contains('active')) {
+                icon.classList.remove('fa-bars');
+                icon.classList.add('fa-times');
+            } else {
+                icon.classList.remove('fa-times');
+                icon.classList.add('fa-bars');
+            }
         }
     }
 }
 
-// Close dropdowns when clicking outside
+// إغلاق القائمة عند النقر خارجها
 document.addEventListener('click', function(event) {
-    const dropdowns = document.querySelectorAll('.dropdown');
-    
-    dropdowns.forEach(dropdown => {
-        if (!dropdown.contains(event.target)) {
-            const content = dropdown.querySelector('.dropdown-content');
-            if (content) {
-                content.style.display = 'none';
-            }
-        }
-    });
-});
-
-// Handle dropdown clicks
-document.querySelectorAll('.dropdown > a').forEach(dropdown => {
-    dropdown.addEventListener('click', function(e) {
-        if (window.innerWidth <= 992) {
-            e.preventDefault();
-            const content = this.nextElementSibling;
-            const isActive = content.style.display === 'block';
-            
-            // Close all dropdowns
-            document.querySelectorAll('.dropdown-content').forEach(item => {
-                item.style.display = 'none';
-            });
-            
-            // Toggle current dropdown
-            content.style.display = isActive ? 'none' : 'block';
-            
-            // Toggle active class on parent
-            this.parentElement.classList.toggle('active');
-        }
-    });
-});
-
-// Simple Search Function
-function search() {
-    const query = document.getElementById('searchInput').value.trim();
-    if (query !== '') {
-        // In a real site, this would redirect to search results
-        alert(`البحث عن: ${query}`);
-        // window.location.href = `search.html?q=${encodeURIComponent(query)}`;
-    }
-}
-
-// Handle Enter key in search
-document.addEventListener('DOMContentLoaded', function() {
-    const searchInput = document.getElementById('searchInput');
-    if (searchInput) {
-        searchInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                search();
-            }
-        });
-    }
-});
-
-// Movie Card Hover Effects
-document.querySelectorAll('.movie-card').forEach(card => {
-    card.addEventListener('mouseenter', function() {
-        this.style.zIndex = '10';
-    });
-    
-    card.addEventListener('mouseleave', function() {
-        this.style.zIndex = '1';
-    });
-});
-
-// Add to Favorites
-function addToFavorites(movieId) {
-    let favorites = JSON.parse(localStorage.getItem('akwam_favorites') || '[]');
-    
-    if (!favorites.includes(movieId)) {
-        favorites.push(movieId);
-        localStorage.setItem('akwam_favorites', JSON.stringify(favorites));
-        showNotification('تمت الإضافة إلى المفضلة', 'success');
-        return true;
-    } else {
-        favorites = favorites.filter(id => id !== movieId);
-        localStorage.setItem('akwam_favorites', JSON.stringify(favorites));
-        showNotification('تمت الإزالة من المفضلة', 'info');
-        return false;
-    }
-}
-
-// Check if movie is in favorites
-function isFavorite(movieId) {
-    const favorites = JSON.parse(localStorage.getItem('akwam_favorites') || '[]');
-    return favorites.includes(movieId);
-}
-
-// Watch History
-function addToHistory(movieId, title) {
-    let history = JSON.parse(localStorage.getItem('akwam_history') || '[]');
-    
-    // Remove if already exists
-    history = history.filter(item => item.id !== movieId);
-    
-    // Add to beginning
-    history.unshift({
-        id: movieId,
-        title: title,
-        timestamp: Date.now()
-    });
-    
-    // Keep only last 50 items
-    history = history.slice(0, 50);
-    
-    localStorage.setItem('akwam_history', JSON.stringify(history));
-}
-
-// Show Notification
-function showNotification(message, type = 'info') {
-    // Remove existing notifications
-    const existingNotifications = document.querySelectorAll('.notification');
-    existingNotifications.forEach(notification => notification.remove());
-    
-    // Create notification element
-    const notification = document.createElement('div');
-    notification.className = `notification notification-${type}`;
-    notification.textContent = message;
-    
-    // Add styles
-    notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        padding: 15px 25px;
-        border-radius: 5px;
-        color: white;
-        font-weight: bold;
-        z-index: 10000;
-        opacity: 0;
-        transform: translateY(-20px);
-        transition: all 0.3s;
-    `;
-    
-    // Style based on type
-    if (type === 'success') {
-        notification.style.backgroundColor = '#46d369';
-    } else if (type === 'error') {
-        notification.style.backgroundColor = '#e50914';
-    } else {
-        notification.style.backgroundColor = '#2196F3';
-    }
-    
-    document.body.appendChild(notification);
-    
-    // Animate in
-    setTimeout(() => {
-        notification.style.opacity = '1';
-        notification.style.transform = 'translateY(0)';
-    }, 10);
-    
-    // Remove after 3 seconds
-    setTimeout(() => {
-        notification.style.opacity = '0';
-        notification.style.transform = 'translateY(-20px)';
-        setTimeout(() => {
-            notification.remove();
-        }, 300);
-    }, 3000);
-}
-
-// Theme Switcher (Light/Dark)
-function toggleTheme() {
-    const body = document.body;
-    const currentTheme = body.getAttribute('data-theme');
-    
-    if (currentTheme === 'light') {
-        body.setAttribute('data-theme', 'dark');
-        localStorage.setItem('akwam_theme', 'dark');
-        showNotification('تم التغيير إلى الوضع الداكن', 'info');
-    } else {
-        body.setAttribute('data-theme', 'light');
-        localStorage.setItem('akwam_theme', 'light');
-        showNotification('تم التغيير إلى الوضع الفاتح', 'info');
-    }
-}
-
-// Load saved theme
-function loadTheme() {
-    const savedTheme = localStorage.getItem('akwam_theme') || 'dark';
-    document.body.setAttribute('data-theme', savedTheme);
-}
-
-// Keyboard Shortcuts
-document.addEventListener('keydown', function(e) {
-    // Don't trigger shortcuts when user is typing
-    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
-        return;
-    }
-    
-    // Ctrl/Cmd + F to focus search
-    if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
-        e.preventDefault();
-        const searchInput = document.getElementById('searchInput');
-        if (searchInput) {
-            searchInput.focus();
-        }
-    }
-    
-    // Esc to close mobile menu
-    if (e.key === 'Escape') {
-        const navMenu = document.querySelector('.nav-menu');
-        if (navMenu && navMenu.classList.contains('active')) {
-            toggleMenu();
-        }
-    }
-    
-    // Ctrl/Cmd + T to toggle theme
-    if ((e.ctrlKey || e.metaKey) && e.key === 't') {
-        e.preventDefault();
-        toggleTheme();
-    }
-});
-
-// Lazy Load Images
-function lazyLoadImages() {
-    const images = document.querySelectorAll('img[data-src]');
-    
-    const imageObserver = new IntersectionObserver((entries, observer) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                const img = entry.target;
-                img.src = img.dataset.src;
-                img.removeAttribute('data-src');
-                observer.unobserve(img);
-            }
-        });
-    });
-    
-    images.forEach(img => imageObserver.observe(img));
-}
-
-// Initialize when page loads
-document.addEventListener('DOMContentLoaded', function() {
-    // Load theme
-    loadTheme();
-    
-    // Initialize lazy loading
-    lazyLoadImages();
-    
-    // Close mobile menu when clicking on link
-    document.querySelectorAll('.nav-links a').forEach(link => {
-        link.addEventListener('click', function() {
-            if (window.innerWidth <= 992) {
-                toggleMenu();
-            }
-        });
-    });
-    
-    // Add theme toggle button to footer
-    const themeToggle = document.createElement('button');
-    themeToggle.className = 'btn btn-secondary';
-    themeToggle.innerHTML = '<i class="fas fa-moon"></i> تغيير الثيم';
-    themeToggle.onclick = toggleTheme;
-    themeToggle.style.marginTop = '20px';
-    
-    const footerSection = document.querySelector('.footer-section:first-child');
-    if (footerSection) {
-        footerSection.appendChild(themeToggle);
-    }
-});
-
-// Handle window resize
-window.addEventListener('resize', function() {
     const navMenu = document.querySelector('.nav-menu');
     const mobileToggle = document.querySelector('.mobile-toggle');
     
-    if (window.innerWidth > 992) {
-        navMenu.classList.remove('active');
-        mobileToggle.classList.remove('active');
-        navMenu.style.display = 'flex';
-    } else {
-        navMenu.style.display = 'none';
+    if (navMenu && mobileToggle && 
+        !navMenu.contains(event.target) && 
+        !mobileToggle.contains(event.target) &&
+        navMenu.classList.contains('active')) {
+        toggleMenu();
     }
 });
 
-// Simple Error Handler
-function handleError(error) {
-    console.error('Error:', error);
-    showNotification('حدث خطأ، يرجى المحاولة مرة أخرى', 'error');
-}
+// إغلاق القائمة عند تغيير حجم النافذة
+window.addEventListener('resize', function() {
+    if (window.innerWidth > 768) {
+        const navMenu = document.querySelector('.nav-menu');
+        if (navMenu && navMenu.classList.contains('active')) {
+            navMenu.classList.remove('active');
+            const mobileToggle = document.querySelector('.mobile-toggle');
+            if (mobileToggle) {
+                mobileToggle.classList.remove('active');
+                const icon = mobileToggle.querySelector('i');
+                if (icon) {
+                    icon.classList.remove('fa-times');
+                    icon.classList.add('fa-bars');
+                }
+            }
+        }
+    }
+});
 
-// Format Date
-function formatDate(date) {
-    return new Date(date).toLocaleDateString('ar-SA', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
+// إضافة تأثير التمرير السلس
+document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+        e.preventDefault();
+        const targetId = this.getAttribute('href');
+        if (targetId === '#') return;
+        
+        const targetElement = document.querySelector(targetId);
+        if (targetElement) {
+            targetElement.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start'
+            });
+        }
     });
-}
+});
 
-// Debounce function for performance
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
+// إضافة تأثير عند التمرير للشريط العلوي
+window.addEventListener('scroll', function() {
+    const header = document.querySelector('.header');
+    if (window.scrollY > 100) {
+        header.classList.add('scrolled');
+    } else {
+        header.classList.remove('scrolled');
+    }
+});
+
+// تهيئة الموقع عند التحميل
+document.addEventListener('DOMContentLoaded', function() {
+    // تحديث سنة حقوق النشر تلقائياً
+    const copyrightElements = document.querySelectorAll('.footer-bottom p');
+    copyrightElements.forEach(element => {
+        element.innerHTML = element.innerHTML.replace('2024', new Date().getFullYear());
+    });
+    
+    // إضافة تأثيرات للبطاقات
+    const movieCards = document.querySelectorAll('.movie-card');
+    movieCards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-5px)';
+            this.style.boxShadow = '0 10px 20px rgba(0,0,0,0.2)';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+            this.style.boxShadow = '0 5px 15px rgba(0,0,0,0.1)';
+        });
+    });
+});
+
+// وظائف مشتركة للموقع
+const AkwamUtils = {
+    // تنقية النصوص من HTML
+    sanitizeText(text) {
+        if (!text) return '';
+        return text
+            .replace(/<\/?[^>]+(>|$)/g, '') // إزالة وسوم HTML
+            .replace(/&nbsp;/g, ' ')        // إزالة المسافات غير القابلة للكسر
+            .replace(/&amp;/g, '&')         // استبدال &
+            .replace(/&quot;/g, '"')        // استبدال "
+            .replace(/&#39;/g, "'")         // استبدال '
+            .trim();
+    },
+
+    // تقطيع النص وإضافة ...
+    truncateText(text, maxLength = 100) {
+        if (!text) return '';
+        if (text.length <= maxLength) return text;
+        return text.substring(0, maxLength) + '...';
+    },
+
+    // تنسيق التاريخ
+    formatDate(dateString) {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        return date.toLocaleDateString('ar-SA', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    },
+
+    // تحميل الصور مع التعامل مع الأخطاء
+    loadImage(imgElement, src, fallbackSrc = null) {
+        if (!imgElement) return;
+        
+        imgElement.onerror = function() {
+            if (fallbackSrc) {
+                this.src = fallbackSrc;
+            } else {
+                // إنشاء صورة تجريبية باستخدام Placeholder
+                const title = this.alt || 'صورة';
+                const encodedTitle = encodeURIComponent(title);
+                this.src = `https://via.placeholder.com/300x450/333/666?text=${encodedTitle}`;
+            }
+            this.onerror = null; // منع حلقات الخطأ
         };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
-}
+        
+        imgElement.src = src;
+    },
 
-// Export functions for use in other files
-window.Akwam = {
-    toggleMenu,
-    search,
-    addToFavorites,
-    isFavorite,
-    addToHistory,
-    showNotification,
-    toggleTheme,
-    handleError,
-    formatDate
+    // إنشاء عنصر بطاقة
+    createMovieCard(item) {
+        const card = document.createElement('div');
+        card.className = 'movie-card';
+        
+        const title = this.sanitizeText(item.title);
+        const truncatedTitle = this.truncateText(title, 30);
+        
+        card.innerHTML = `
+            <a href="watch.html?url=${encodeURIComponent(item.url)}&type=${item.type}" 
+               onclick="previewContent(event, '${item.url}', '${item.type}')">
+                <div class="movie-poster">
+                    ${item.poster ? 
+                        `<img src="${item.poster}" alt="${title}" 
+                              onerror="this.src='https://via.placeholder.com/300x450/333/666?text=${encodeURIComponent(title.substring(0, 20))}'">` :
+                        `<div class="no-poster">${title.substring(0, 20)}</div>`
+                    }
+                    <div class="movie-overlay">
+                        <i class="fas fa-play"></i>
+                    </div>
+                    ${item.quality ? `<span class="movie-quality">${item.quality}</span>` : ''}
+                    ${item.year ? `<span class="movie-year">${item.year}</span>` : ''}
+                </div>
+                <div class="movie-info">
+                    <h3 class="movie-title" title="${title}">
+                        ${truncatedTitle}
+                    </h3>
+                    <div class="movie-meta">
+                        <span class="movie-type">${this.getTypeArabic(item.type)}</span>
+                        ${item.year ? `<span>${item.year}</span>` : ''}
+                    </div>
+                </div>
+            </a>
+        `;
+        
+        return card;
+    },
+
+    // ترجمة النوع إلى العربية
+    getTypeArabic(type) {
+        const types = {
+            'movie': 'فيلم',
+            'series': 'مسلسل',
+            'anime': 'أنمي',
+            'show': 'عرض',
+            'tv': 'تلفزيوني',
+            'documentary': 'وثائقي',
+            'featured': 'مميز'
+        };
+        return types[type] || type;
+    },
+
+    // إظهار إشعار
+    showNotification(message, type = 'info') {
+        // إزالة الإشعارات القديمة
+        const oldNotification = document.querySelector('.notification');
+        if (oldNotification) {
+            oldNotification.remove();
+        }
+        
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+        notification.innerHTML = `
+            <div class="notification-content">
+                <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+                <span>${message}</span>
+            </div>
+            <button class="notification-close" onclick="this.parentElement.remove()">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // إزالة الإشعار بعد 5 ثوانٍ
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, 5000);
+    },
+
+    // إظهار مؤشر التحميل
+    showLoader(containerId) {
+        const container = document.getElementById(containerId);
+        if (container) {
+            container.innerHTML = `
+                <div class="loading-spinner">
+                    <div class="spinner"></div>
+                    <p>جاري التحميل...</p>
+                </div>
+            `;
+        }
+    },
+
+    // إخفاء مؤشر التحميل
+    hideLoader(containerId, content = '') {
+        const container = document.getElementById(containerId);
+        if (container) {
+            container.innerHTML = content;
+        }
+    }
 };
+
+// جعل الأداة المساعدة متاحة عالمياً
+window.AkwamUtils = AkwamUtils;
